@@ -1,19 +1,18 @@
 {
-  "name": "backend",
-  "module": "index.ts",
-  "type": "module",
+  "name": "chaintrace-backend",
   "private": true,
-  "devDependencies": {
-    "@types/bun": "latest",
-    "@types/express": "^5.0.6",
-    "@types/node": "^26.2.0",
-    "tsx": "^4.23.12"
-  },
-  "peerDependencies": {
-    "typescript": "^7.0.2"
+  "scripts": {
+    "dev": "bun --watch src/server.ts",
+    "start": "bun src/server.ts",
+    "ingest": "bun scripts/ingest-package.ts"
   },
   "dependencies": {
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1"
+    "dotenv": "latest",
+    "semver": "^7.8.5"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "@types/semver": "^7.8.0",
+    "typescript": "latest"
   }
 }
