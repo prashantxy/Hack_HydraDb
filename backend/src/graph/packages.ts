@@ -22,15 +22,17 @@ export async function upsertPackages(
   }
 
   const query = `
-  UNWIND $rows AS row
-  MERGE (n {id: row.id})
-  SET n:Package, n.name = row.name, n.ecosystem = row.ecosystem
-`;
+    UNWIND $rows AS row
+    MERGE (n {id: row.vertex})
+    SET n:Package,
+        n.name = row.name,
+        n.ecosystem = row.ecosystem
+  `;
 
   await hydraQuery(query, {
     params: {
       rows: packages.map((pkg) => ({
-        id: pkg.id,
+        vertex: pkg.id,
         name: pkg.name,
         ecosystem: pkg.ecosystem,
       })),
@@ -46,15 +48,19 @@ export async function upsertVersions(
   }
 
   const query = `
-  UNWIND $rows AS row
-  MERGE (n {id: row.id})
-  SET n:Version, n.key = row.key, n.packageName = row.packageName, n.version = row.version, n.ecosystem = row.ecosystem
-`;
+    UNWIND $rows AS row
+    MERGE (n {id: row.vertex})
+    SET n:Version,
+        n.key = row.key,
+        n.packageName = row.packageName,
+        n.version = row.version,
+        n.ecosystem = row.ecosystem
+  `;
 
   await hydraQuery(query, {
     params: {
       rows: versions.map((version) => ({
-        id: version.id,
+        vertex: version.id,
         key: version.key,
         packageName: version.packageName,
         version: version.version,
@@ -63,7 +69,6 @@ export async function upsertVersions(
     },
   });
 }
-
 export async function createPackageVersionEdges(
   edges: Array<{
     packageId: number;
@@ -75,10 +80,11 @@ export async function createPackageVersionEdges(
   }
 
   const query = `
-  UNWIND $rows AS row
-  MERGE (n {id: row.id})
-  SET n:Version, n.key = row.key, n.packageName = row.packageName, n.version = row.version, n.ecosystem = row.ecosystem
-`;
+    UNWIND $rows AS row
+    MATCH (p:Package {id: row.packageId}),
+          (v:Version {id: row.versionId})
+    CREATE (p)-[:HAS_VERSION]->(v)
+  `;
 
   await hydraQuery(query, {
     params: {

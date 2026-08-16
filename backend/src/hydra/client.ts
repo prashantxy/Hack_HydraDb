@@ -35,13 +35,11 @@ export async function hydraQuery(
         "X-Graph-Namespace": HYDRA_NAMESPACE,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        cell_id: HYDRA_CELL_ID,
-        query,
-        ...(options.params
-          ? { params: options.params }
-          : {}),
-      }),
+     body: JSON.stringify({
+  cell_id: HYDRA_CELL_ID,
+  query,
+  parameters: options.params ?? {},
+}),
     },
   );
 
