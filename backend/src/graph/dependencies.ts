@@ -18,10 +18,12 @@ export async function createDependencyEdges(
 
   const query = `
     UNWIND $rows AS row
-    MATCH
-      (source:Version {id: row.fromVersionId}),
-      (target:Version {id: row.toVersionId})
+
+    MATCH (source:Version {id: row.fromVersionId})
+    MATCH (target:Version {id: row.toVersionId})
+
     MERGE (source)-[r:DEPENDS_ON {id: row.id}]->(target)
+
     SET r.packageName = row.packageName,
         r.versionRange = row.versionRange,
         r.dependencyType = row.dependencyType

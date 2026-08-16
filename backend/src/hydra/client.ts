@@ -13,10 +13,15 @@ export interface HydraQueryOptions {
   params?: Record<string, unknown>;
 }
 
+export interface HydraValue {
+  type: string;
+  value: unknown;
+}
+
 export interface HydraQueryResult {
   query_id: string;
   columns: string[];
-  rows: unknown[][];
+  rows: HydraValue[][];
   read_epoch: number | null;
   next_cursor: string | null;
   bookmark?: string;
