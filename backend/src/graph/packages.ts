@@ -22,12 +22,13 @@ export async function upsertPackages(
   }
 
   const query = `
-    UNWIND $rows AS row
-    MERGE (n:Package {id: row.id})
-    SET
-      n.name = row.name,
-      n.ecosystem = row.ecosystem
-  `;
+  UNWIND $rows AS row
+  MERGE (n:Package {id: row.id})
+  SET
+    n:Package,
+    n.name = row.name,
+    n.ecosystem = row.ecosystem
+`;
 
   await hydraQuery(query, {
     params: {
@@ -48,14 +49,15 @@ export async function upsertVersions(
   }
 
   const query = `
-    UNWIND $rows AS row
-    MERGE (n:Version {id: row.id})
-    SET
-      n.key = row.key,
-      n.packageName = row.packageName,
-      n.version = row.version,
-      n.ecosystem = row.ecosystem
-  `;
+  UNWIND $rows AS row
+  MERGE (n:Version {id: row.id})
+  SET
+    n:Version,
+    n.key = row.key,
+    n.packageName = row.packageName,
+    n.version = row.version,
+    n.ecosystem = row.ecosystem
+`;
 
   await hydraQuery(query, {
     params: {
