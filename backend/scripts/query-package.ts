@@ -1,14 +1,16 @@
 import { hydraQuery } from "../src/hydra/client";
 
 const result = await hydraQuery(`
-  MATCH (p:Package)-[:HAS_VERSION]->(v:Version)
-  WHERE p.name = $packageName
-  RETURN p.name AS package_name,
-         v.key AS version_key,
-         v.version AS version
+  MATCH (v:Version)-[d:DEPENDS_ON]->(target:Version)
+  WHERE v.key = $versionKey
+  RETURN v.key AS source,
+         d.packageName AS package_name,
+         d.versionRange AS version_range,
+         d.dependencyType AS dependency_type,
+         target.key AS target
 `, {
   params: {
-    packageName: "axios",
+    versionKey: "npm:axios@1.7.2",
   },
 });
 

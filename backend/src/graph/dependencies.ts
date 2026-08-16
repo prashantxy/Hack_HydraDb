@@ -4,7 +4,6 @@ export interface DependencyEdge {
   id: number;
   fromVersionId: number;
   toVersionId: number;
-
   packageName: string;
   versionRange: string;
   dependencyType: "runtime" | "optional" | "peer";
@@ -22,15 +21,10 @@ export async function createDependencyEdges(
     MATCH
       (source:Version {id: row.fromVersionId}),
       (target:Version {id: row.toVersionId})
-    CREATE
-      (source)-[
-        :DEPENDS_ON {
-          id: row.id,
-          packageName: row.packageName,
-          versionRange: row.versionRange,
-          dependencyType: row.dependencyType
-        }
-      ]->(target)
+    MERGE (source)-[r:DEPENDS_ON {id: row.id}]->(target)
+    SET r.packageName = row.packageName,
+        r.versionRange = row.versionRange,
+        r.dependencyType = row.dependencyType
   `;
 
   await hydraQuery(query, {
