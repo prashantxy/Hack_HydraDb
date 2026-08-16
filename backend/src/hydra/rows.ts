@@ -1,6 +1,8 @@
 import type { HydraValue } from "./client";
 
-export function unwrapHydraValue(value: HydraValue): unknown {
+export function unwrapHydraValue(
+  value: HydraValue | undefined,
+): unknown {
   return value?.value;
 }
 

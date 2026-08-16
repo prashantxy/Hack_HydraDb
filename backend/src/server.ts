@@ -1,34 +1,17 @@
-const PORT =
-  Number(process.env.PORT ?? 3001);
+import { router } from "./api/router";
 
-Bun.serve({
+const PORT = Number(
+  process.env.PORT ?? 3000,
+);
+
+const server = Bun.serve({
   port: PORT,
 
-  fetch(request) {
-    const url =
-      new URL(request.url);
-
-    if (
-      request.method === "GET" &&
-      url.pathname === "/health"
-    ) {
-      return Response.json({
-        service: "chaintrace-backend",
-        status: "ok",
-      });
-    }
-
-    return Response.json(
-      {
-        error: "Not found",
-      },
-      {
-        status: 404,
-      },
-    );
+  async fetch(req) {
+    return router(req);
   },
 });
 
 console.log(
-  `ChainTrace backend listening on :${PORT}`,
+  `ChainTrace API running on http://localhost:${server.port}`,
 );

@@ -1,4 +1,4 @@
-import { hydraQuery } from "../hydra/client";
+import { hydraQuery } from "../../hydra/client";
 
 export interface DependencyEdge {
   id: number;

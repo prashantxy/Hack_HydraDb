@@ -20,12 +20,12 @@ import {
   createPackageVersionEdges,
   type PackageVertex,
   type VersionVertex,
-} from "../src/graph/packages";
+} from "../src/graph/query/packages";
 
 import {
   createDependencyEdges,
   type DependencyEdge,
-} from "../src/graph/dependencies";
+} from "../src/graph/query/dependencies";
 
 const packageName = process.argv[2] ?? "axios";
 const requestedVersion = process.argv[3] ?? "1.7.2";
