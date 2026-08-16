@@ -1,35 +1,42 @@
 export interface NpmVersionMetadata {
   name: string;
   version: string;
+
   dependencies?: Record<string, string>;
   optionalDependencies?: Record<string, string>;
   peerDependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
+
   repository?: unknown;
 }
 
-interface NpmRegistryResponse {
+export interface NpmRegistryResponse {
   name: string;
+
   versions: Record<string, NpmVersionMetadata>;
+
+  "dist-tags"?: Record<string, string>;
 }
 
 export async function fetchNpmPackage(
   packageName: string,
 ): Promise<NpmRegistryResponse> {
-  const encoded = encodeURIComponent(packageName);
+  const encodedPackageName =
+    encodeURIComponent(packageName);
 
-  const response = await fetch(
-    `https://registry.npmjs.org/${encoded}`,
-    {
-      headers: {
-        Accept: "application/json",
-      },
+  const url =
+    `https://registry.npmjs.org/${encodedPackageName}`;
+
+  const response = await fetch(url, {
+    headers: {
+      Accept: "application/json",
     },
-  );
+  });
 
   if (!response.ok) {
     throw new Error(
-      `npm registry request failed (${response.status})`,
+      `npm registry request failed ` +
+      `(${response.status}) ${response.statusText}`,
     );
   }
 

@@ -1,18 +1,19 @@
 {
   "name": "chaintrace-backend",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "bun --watch src/server.ts",
     "start": "bun src/server.ts",
-    "ingest": "bun scripts/ingest-package.ts"
+    "ingest": "bun scripts/ingest-package.ts",
+    "test:npm": "bun scripts/test-npm.ts",
+    "test:resolver": "bun scripts/test-resolver.ts"
   },
   "dependencies": {
-    "dotenv": "latest",
-    "semver": "^7.8.5"
+    "dotenv": "^17.2.1",
+    "semver": "^7.7.2"
   },
   "devDependencies": {
-    "@types/node": "latest",
-    "@types/semver": "^7.8.0",
-    "typescript": "latest"
+    "@types/node": "^24.3.0"
   }
 }
