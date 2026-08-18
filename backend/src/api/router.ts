@@ -15,6 +15,10 @@ import {
 } from "./routes/graph";
 
 import {
+  blastRadiusRoute,
+} from "./routes/blast-radius";
+
+import {
   errorResponse,
 } from "./response";
 
@@ -60,40 +64,35 @@ export async function router(
   }
 
   // ----------------------------------------
-  // GET /packages/:packageName/graph
-  // IMPORTANT:
-  // This must come BEFORE /packages/:packageName
+  // /packages/*
   // ----------------------------------------
 
+  const packagesPrefix = "/packages/";
+  const graphSuffix = "/graph";
+
   // GET /packages/:packageName/graph
-const packagesPrefix = "/packages/";
-const graphSuffix = "/graph";
+  if (
+    url.pathname.startsWith(packagesPrefix) &&
+    url.pathname.endsWith(graphSuffix)
+  ) {
+    const packageName = decodeURIComponent(
+      url.pathname.slice(
+        packagesPrefix.length,
+        -graphSuffix.length,
+      ),
+    );
 
-if (
-  url.pathname.startsWith(packagesPrefix) &&
-  url.pathname.endsWith(graphSuffix)
-) {
-  const packageName = decodeURIComponent(
-    url.pathname.slice(
-      packagesPrefix.length,
-      -graphSuffix.length,
-    ),
-  );
+    const depth =
+      url.searchParams.get("depth") ??
+      undefined;
 
-  const depth =
-    url.searchParams.get("depth") ??
-    undefined;
+    return graphRoute(
+      packageName,
+      depth,
+    );
+  }
 
-  return graphRoute(
-    packageName,
-    depth,
-  );
-}
-
-  // ----------------------------------------
   // GET /packages/:packageName
-  // ----------------------------------------
-
   if (
     url.pathname.startsWith(packagesPrefix)
   ) {
@@ -107,10 +106,12 @@ if (
   }
 
   // ----------------------------------------
-  // GET /versions/:versionKey/dependencies
+  // /versions/*
   // ----------------------------------------
 
   const versionsPrefix = "/versions/";
+
+  // GET /versions/:versionKey/dependencies
   const dependenciesSuffix = "/dependencies";
 
   if (
@@ -128,6 +129,36 @@ if (
 
     return versionDependenciesRoute(
       versionKey,
+    );
+  }
+
+  // ----------------------------------------
+  // GET /versions/:versionKey/blast-radius
+  // ----------------------------------------
+
+  const blastRadiusSuffix =
+    "/blast-radius";
+
+  if (
+    url.pathname.startsWith(versionsPrefix) &&
+    url.pathname.endsWith(
+      blastRadiusSuffix,
+    )
+  ) {
+    const versionKey = decodeURIComponent(
+      url.pathname.slice(
+        versionsPrefix.length,
+        -blastRadiusSuffix.length,
+      ),
+    );
+
+    const depth =
+      url.searchParams.get("depth") ??
+      undefined;
+
+    return blastRadiusRoute(
+      versionKey,
+      depth,
     );
   }
 
