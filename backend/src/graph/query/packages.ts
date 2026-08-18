@@ -71,6 +71,7 @@ export async function upsertVersions(
 }
 export async function createPackageVersionEdges(
   edges: Array<{
+    id: number;
     packageId: number;
     versionId: number;
   }>,
@@ -81,9 +82,17 @@ export async function createPackageVersionEdges(
 
   const query = `
     UNWIND $rows AS row
-    MATCH (p:Package {id: row.packageId}),
-          (v:Version {id: row.versionId})
-    CREATE (p)-[:HAS_VERSION]->(v)
+
+    MATCH
+      (p:Package {id: row.packageId}),
+      (v:Version {id: row.versionId})
+
+    MERGE
+      (p)-[r:HAS_VERSION {id: row.id}]->(v)
+
+    SET
+      r.packageId = row.packageId,
+      r.versionId = row.versionId
   `;
 
   await hydraQuery(query, {
