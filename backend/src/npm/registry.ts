@@ -1,4 +1,10 @@
+export interface NpmMaintainer {
+  name: string;
+  email?: string;
+}
+
 export interface NpmVersionMetadata {
+  maintainers: any;
   name: string;
   version: string;
 
@@ -11,6 +17,7 @@ export interface NpmVersionMetadata {
 }
 
 export interface NpmRegistryResponse {
+  maintainers: never[];
   name: string;
 
   versions: Record<string, NpmVersionMetadata>;

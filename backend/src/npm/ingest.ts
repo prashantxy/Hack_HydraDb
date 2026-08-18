@@ -8,6 +8,13 @@ import {
   type NormalizedPackageVersion,
 } from "./normalize";
 
+import {
+  upsertMaintainers,
+  createMaintainsEdges,
+  type MaintainerVertex,
+  type MaintainsEdge,
+} from "../graph/query/maintainers";
+
 import { resolveVersion } from "./resolver";
 
 import {
@@ -35,6 +42,8 @@ export interface IngestStats {
   versions: number;
   dependencyEdges: number;
   packageVersionEdges: number;
+  maintainers: number;
+  maintainsEdges: number;
   processedNodes: number;
   skippedNodes: number;
   failedNodes: number;
@@ -59,6 +68,12 @@ interface PackageVersionEdge {
   packageId: number;
   versionId: number;
 }
+
+/*
+ * ============================================================
+ * DETERMINISTIC IDS
+ * ============================================================
+ */
 
 function stableNumericId(key: string): number {
   let hash = 2166136261;
@@ -88,11 +103,12 @@ function versionId(
   );
 }
 
-function versionKey(
-  packageName: string,
-  version: string,
-): string {
-  return `npm:${packageName}@${version}`;
+function maintainerId(
+  npmUsername: string,
+): number {
+  return stableNumericId(
+    `maintainer:npm:${npmUsername}`,
+  );
 }
 
 function packageVersionEdgeId(
@@ -103,6 +119,37 @@ function packageVersionEdgeId(
     `has-version:${packageId}->${versionId}`,
   );
 }
+
+function maintainsEdgeId(
+  maintainerId: number,
+  packageId: number,
+): number {
+  return stableNumericId(
+    `maintains:${maintainerId}->${packageId}`,
+  );
+}
+
+function dependencyEdgeId(
+  sourceKey: string,
+  targetKey: string,
+): number {
+  return stableNumericId(
+    `dependency:${sourceKey}->${targetKey}`,
+  );
+}
+
+function versionKey(
+  packageName: string,
+  version: string,
+): string {
+  return `npm:${packageName}@${version}`;
+}
+
+/*
+ * ============================================================
+ * CONCURRENCY
+ * ============================================================
+ */
 
 async function mapConcurrent<T, R>(
   items: T[],
@@ -138,13 +185,21 @@ async function mapConcurrent<T, R>(
 
   await Promise.all(
     Array.from(
-      { length: workerCount },
+      {
+        length: workerCount,
+      },
       () => runWorker(),
     ),
   );
 
   return results;
 }
+
+/*
+ * ============================================================
+ * DEPENDENCY RESOLUTION
+ * ============================================================
+ */
 
 async function resolveDependencies(
   dependencies: NormalizedDependency[],
@@ -169,6 +224,12 @@ async function resolveDependencies(
   );
 }
 
+/*
+ * ============================================================
+ * FETCH + NORMALIZE
+ * ============================================================
+ */
+
 async function fetchAndNormalize(
   ref: PackageRef,
 ): Promise<NormalizedPackageVersion> {
@@ -191,6 +252,12 @@ async function fetchAndNormalize(
   );
 }
 
+/*
+ * ============================================================
+ * INGEST
+ * ============================================================
+ */
+
 export async function ingestPackage(
   options: IngestOptions,
 ): Promise<IngestStats> {
@@ -212,6 +279,8 @@ export async function ingestPackage(
     versions: 0,
     dependencyEdges: 0,
     packageVersionEdges: 0,
+    maintainers: 0,
+    maintainsEdges: 0,
     processedNodes: 0,
     skippedNodes: 0,
     failedNodes: 0,
@@ -219,15 +288,15 @@ export async function ingestPackage(
   };
 
   /*
-   * Global visited set.
-
-   * Key:
+   * ==========================================================
+   * GLOBAL VISITED SET
+   * ==========================================================
+   *
    * npm:<package>@<resolved-version>
    *
-   * This prevents cycles and prevents the same
-   * package/version from being recursively processed
-   * multiple times.
+   * Prevents cycles and duplicate recursive processing.
    */
+
   const visited = new Set<string>();
 
   let currentLevel: PackageRef[] = [
@@ -238,6 +307,12 @@ export async function ingestPackage(
     },
   ];
 
+  /*
+   * ==========================================================
+   * BFS
+   * ==========================================================
+   */
+
   while (currentLevel.length > 0) {
     const depth =
       currentLevel[0].depth;
@@ -247,9 +322,11 @@ export async function ingestPackage(
     );
 
     /*
-     * Remove already-visited nodes before processing
-     * this level.
+     * --------------------------------------------------------
+     * Deduplicate current level
+     * --------------------------------------------------------
      */
+
     const levelToProcess: PackageRef[] = [];
 
     for (const ref of currentLevel) {
@@ -276,30 +353,38 @@ export async function ingestPackage(
     );
 
     /*
-     * Batch collections for this BFS level.
+     * ========================================================
+     * BATCH COLLECTIONS
+     * ========================================================
      */
+
     const packageVertices =
       new Map<number, PackageVertex>();
 
     const versionVertices =
       new Map<number, VersionVertex>();
 
+    const maintainerVertices =
+      new Map<number, MaintainerVertex>();
+
     const packageVersionEdges =
       new Map<string, PackageVersionEdge>();
+
+    const maintainsEdges =
+      new Map<number, MaintainsEdge>();
 
     const dependencyEdges =
       new Map<number, DependencyEdge>();
 
-    /*
-     * Children discovered at this level.
-     */
     const nextLevelMap =
       new Map<string, PackageRef>();
 
     /*
-     * Fetch and resolve all packages in the
-     * current BFS level concurrently.
+     * ========================================================
+     * FETCH CURRENT LEVEL
+     * ========================================================
      */
+
     const results = await mapConcurrent(
       levelToProcess,
       concurrency,
@@ -336,8 +421,11 @@ export async function ingestPackage(
     );
 
     /*
-     * Convert results into graph rows.
+     * ========================================================
+     * BUILD GRAPH ROWS
+     * ========================================================
      */
+
     for (const result of results) {
       if (
         result.error ||
@@ -360,6 +448,12 @@ export async function ingestPackage(
       const normalized =
         result.normalized;
 
+      /*
+       * ------------------------------------------------------
+       * ROOT PACKAGE
+       * ------------------------------------------------------
+       */
+
       const rootPackageId =
         packageId(
           normalized.packageName,
@@ -371,21 +465,22 @@ export async function ingestPackage(
           normalized.version,
         );
 
-      /*
-       * Package vertex.
-       */
       packageVertices.set(
         rootPackageId,
         {
           id: rootPackageId,
-          name: normalized.packageName,
+          name:
+            normalized.packageName,
           ecosystem: "npm",
         },
       );
 
       /*
-       * Version vertex.
+       * ------------------------------------------------------
+       * ROOT VERSION
+       * ------------------------------------------------------
        */
+
       versionVertices.set(
         rootVersionId,
         {
@@ -400,12 +495,11 @@ export async function ingestPackage(
       );
 
       /*
-       * Package -> Version
-       *
-       * IMPORTANT:
-       * HydraDB requires an explicit relationship ID
-       * when MERGE is used inside UNWIND.
+       * ------------------------------------------------------
+       * PACKAGE -> VERSION
+       * ------------------------------------------------------
        */
+
       const rootPackageVersionEdgeId =
         packageVersionEdgeId(
           rootPackageId,
@@ -425,26 +519,87 @@ export async function ingestPackage(
       );
 
       /*
-       * Process dependencies.
+       * ------------------------------------------------------
+       * MAINTAINERS
+       * ------------------------------------------------------
+       *
+       * Expected normalized shape:
+       *
+       * maintainers: string[]
+       *
+       * Example:
+       *
+       * [
+       *   "nick",
+       *   "axios-maintainer"
+       * ]
        */
+
+      const maintainers =
+        normalized.maintainers ?? [];
+
+      for (
+        const npmUsername
+        of maintainers
+      ) {
+        if (!npmUsername) {
+          continue;
+        }
+
+        const maintainerVertexId =
+          maintainerId(
+            npmUsername,
+          );
+
+        maintainerVertices.set(
+          maintainerVertexId,
+          {
+            id:
+              maintainerVertexId,
+            username:
+              npmUsername,
+          },
+        );
+
+        const edgeId =
+          maintainsEdgeId(
+            maintainerVertexId,
+            rootPackageId,
+          );
+
+        maintainsEdges.set(
+          edgeId,
+          {
+            id: edgeId,
+            maintainerId:
+              maintainerVertexId,
+            packageId:
+              rootPackageId,
+          },
+        );
+      }
+
+      /*
+       * ======================================================
+       * DEPENDENCIES
+       * ======================================================
+       */
+
       for (
         const dependency
         of result.resolvedDependencies
       ) {
+        /*
+         * ----------------------------------------------------
+         * DEPENDENCY PACKAGE
+         * ----------------------------------------------------
+         */
+
         const dependencyPackageId =
           packageId(
             dependency.name,
           );
 
-        const dependencyVersionId =
-          versionId(
-            dependency.name,
-            dependency.version,
-          );
-
-        /*
-         * Dependency Package vertex.
-         */
         packageVertices.set(
           dependencyPackageId,
           {
@@ -458,8 +613,17 @@ export async function ingestPackage(
         );
 
         /*
-         * Dependency Version vertex.
+         * ----------------------------------------------------
+         * DEPENDENCY VERSION
+         * ----------------------------------------------------
          */
+
+        const dependencyVersionId =
+          versionId(
+            dependency.name,
+            dependency.version,
+          );
+
         versionVertices.set(
           dependencyVersionId,
           {
@@ -480,8 +644,11 @@ export async function ingestPackage(
         );
 
         /*
-         * Dependency Package -> Version.
+         * ----------------------------------------------------
+         * DEPENDENCY PACKAGE -> VERSION
+         * ----------------------------------------------------
          */
+
         const dependencyPackageVersionEdgeId =
           packageVersionEdgeId(
             dependencyPackageId,
@@ -501,22 +668,28 @@ export async function ingestPackage(
         );
 
         /*
-         * Version -> Version dependency edge.
+         * ----------------------------------------------------
+         * VERSION -> VERSION
+         * ----------------------------------------------------
          */
+
+        const targetKey =
+          versionKey(
+            dependency.name,
+            dependency.version,
+          );
+
         const edgeId =
-          stableNumericId(
-            `dependency:` +
-            `${normalized.key}->` +
-            `${versionKey(
-              dependency.name,
-              dependency.version,
-            )}`,
+          dependencyEdgeId(
+            normalized.key,
+            targetKey,
           );
 
         dependencyEdges.set(
           edgeId,
           {
-            id: edgeId,
+            id:
+              edgeId,
             fromVersionId:
               rootVersionId,
             toVersionId:
@@ -531,16 +704,14 @@ export async function ingestPackage(
         );
 
         /*
-         * BFS expansion.
-         *
-         * Don't recurse beyond maxDepth.
+         * ----------------------------------------------------
+         * BFS EXPANSION
+         * ----------------------------------------------------
          */
+
         if (depth < maxDepth) {
           const childKey =
-            versionKey(
-              dependency.name,
-              dependency.version,
-            );
+            targetKey;
 
           if (!visited.has(childKey)) {
             nextLevelMap.set(
@@ -560,8 +731,11 @@ export async function ingestPackage(
     }
 
     /*
-     * Convert maps into HydraDB batch rows.
+     * ========================================================
+     * CONVERT TO ARRAYS
+     * ========================================================
      */
+
     const packages =
       Array.from(
         packageVertices.values(),
@@ -572,15 +746,31 @@ export async function ingestPackage(
         versionVertices.values(),
       );
 
+    const maintainers =
+      Array.from(
+        maintainerVertices.values(),
+      );
+
     const packageVersionEdgeRows =
       Array.from(
         packageVersionEdges.values(),
+      );
+
+    const maintainsEdgeRows =
+      Array.from(
+        maintainsEdges.values(),
       );
 
     const dependencyEdgeRows =
       Array.from(
         dependencyEdges.values(),
       );
+
+    /*
+     * ========================================================
+     * LOG
+     * ========================================================
+     */
 
     console.log(
       `\nWriting depth ${depth}...`,
@@ -595,8 +785,17 @@ export async function ingestPackage(
     );
 
     console.log(
+      `  Maintainers: ${maintainers.length}`,
+    );
+
+    console.log(
       `  HAS_VERSION: ` +
       `${packageVersionEdgeRows.length}`,
+    );
+
+    console.log(
+      `  MAINTAINS: ` +
+      `${maintainsEdgeRows.length}`,
     );
 
     console.log(
@@ -605,8 +804,13 @@ export async function ingestPackage(
     );
 
     /*
-     * Write vertices first.
+     * ========================================================
+     * WRITE VERTICES
+     * ========================================================
+     *
+     * Vertices must exist before relationships.
      */
+
     await upsertPackages(
       packages,
     );
@@ -615,11 +819,22 @@ export async function ingestPackage(
       versions,
     );
 
+    await upsertMaintainers(
+      maintainers,
+    );
+
     /*
-     * Then relationships.
+     * ========================================================
+     * WRITE RELATIONSHIPS
+     * ========================================================
      */
+
     await createPackageVersionEdges(
       packageVersionEdgeRows,
+    );
+
+    await createMaintainsEdges(
+      maintainsEdgeRows,
     );
 
     await createDependencyEdges(
@@ -627,23 +842,35 @@ export async function ingestPackage(
     );
 
     /*
-     * Update statistics.
+     * ========================================================
+     * STATS
+     * ========================================================
      */
+
     stats.packages +=
       packages.length;
 
     stats.versions +=
       versions.length;
 
+    stats.maintainers +=
+      maintainers.length;
+
     stats.packageVersionEdges +=
       packageVersionEdgeRows.length;
+
+    stats.maintainsEdges +=
+      maintainsEdgeRows.length;
 
     stats.dependencyEdges +=
       dependencyEdgeRows.length;
 
     /*
-     * Move to next BFS level.
+     * ========================================================
+     * NEXT BFS LEVEL
+     * ========================================================
      */
+
     currentLevel =
       Array.from(
         nextLevelMap.values(),
@@ -654,6 +881,12 @@ export async function ingestPackage(
       `${currentLevel.length}`,
     );
   }
+
+  /*
+   * ==========================================================
+   * FINAL STATS
+   * ==========================================================
+   */
 
   console.log(
     "\n========================================",
@@ -693,8 +926,18 @@ export async function ingestPackage(
   );
 
   console.log(
+    `Maintainers:     ` +
+    `${stats.maintainers}`,
+  );
+
+  console.log(
     `HAS_VERSION:     ` +
     `${stats.packageVersionEdges}`,
+  );
+
+  console.log(
+    `MAINTAINS:       ` +
+    `${stats.maintainsEdges}`,
   );
 
   console.log(

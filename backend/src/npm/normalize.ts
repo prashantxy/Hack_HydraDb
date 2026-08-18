@@ -5,14 +5,18 @@ import type {
 export interface NormalizedDependency {
   name: string;
   range: string;
-  type: "runtime" | "optional" | "peer";
+  type:
+    | "runtime"
+    | "optional"
+    | "peer";
 }
 
 export interface NormalizedPackageVersion {
+  key: string;
   packageName: string;
   version: string;
-  key: string;
   dependencies: NormalizedDependency[];
+  maintainers: string[];
 }
 
 export function normalizePackageVersion(
@@ -20,9 +24,14 @@ export function normalizePackageVersion(
 ): NormalizedPackageVersion {
   const dependencies: NormalizedDependency[] = [];
 
-  for (const [name, range] of Object.entries(
-    metadata.dependencies ?? {},
-  )) {
+  /*
+   * Runtime dependencies
+   */
+  for (
+    const [name, range] of Object.entries(
+      metadata.dependencies ?? {},
+    )
+  ) {
     dependencies.push({
       name,
       range,
@@ -30,9 +39,14 @@ export function normalizePackageVersion(
     });
   }
 
-  for (const [name, range] of Object.entries(
-    metadata.optionalDependencies ?? {},
-  )) {
+  /*
+   * Optional dependencies
+   */
+  for (
+    const [name, range] of Object.entries(
+      metadata.optionalDependencies ?? {},
+    )
+  ) {
     dependencies.push({
       name,
       range,
@@ -40,9 +54,14 @@ export function normalizePackageVersion(
     });
   }
 
-  for (const [name, range] of Object.entries(
-    metadata.peerDependencies ?? {},
-  )) {
+  /*
+   * Peer dependencies
+   */
+  for (
+    const [name, range] of Object.entries(
+      metadata.peerDependencies ?? {},
+    )
+  ) {
     dependencies.push({
       name,
       range,
@@ -50,10 +69,35 @@ export function normalizePackageVersion(
     });
   }
 
+  /*
+   * Deterministic package identity
+   */
+  const packageName = metadata.name;
+  const version = metadata.version;
+
+  const key =
+    `npm:${packageName}@${version}`;
+
+  /*
+   * npm maintainers
+   *
+   * Example:
+   * [
+   *   { name: "username", email: "..." }
+   * ]
+   *
+   * We only persist the npm username.
+   */
+  const maintainers =
+    metadata.maintainers?.map(
+      (maintainer: { name: any; }) => maintainer.name,
+    ) ?? [];
+
   return {
-    packageName: metadata.name,
-    version: metadata.version,
-    key: `npm:${metadata.name}@${metadata.version}`,
+    packageName,
+    version,
+    key,
     dependencies,
+    maintainers,
   };
 }
