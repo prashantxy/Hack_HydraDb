@@ -1,3 +1,4 @@
+
 import {
   scanProject,
 } from "../lockfiles/scan";
@@ -51,78 +52,96 @@ function printRiskRelationship(
   packageName: string,
   version: string,
 ): void {
-  if (risk.affectedServices <= 0) {
+  if (
+    risk.affectedServices <= 0 ||
+    risk.services.length === 0
+  ) {
     return;
   }
 
   console.log("");
-  console.log("      ┌─ BLAST RADIUS");
+  console.log("      ┌─ SERVICE IMPACT");
+  console.log(
+    `      │ ${packageName}@${version}`,
+  );
   console.log(
     `      │ affected services: ${risk.affectedServices}`,
   );
   console.log(
     `      │ production services: ${risk.productionServices}`,
   );
+  console.log("      │");
 
-  /*
-   * If your API later exposes the actual services array,
-   * render the complete relationship here.
-   *
-   * Example:
-   *
-   * services: [
-   *   {
-   *     name: "checkout-service",
-   *     environment: "production",
-   *     hops: 1
-   *   }
-   * ]
-   */
-  const services = (
-    risk as PackageRiskResponse & {
-      services?: Array<{
-        name: string;
-        environment?: string;
-        hops?: number;
-      }>;
+  for (
+    let i = 0;
+    i < risk.services.length;
+    i += 1
+  ) {
+    const service = risk.services[i];
+
+    if (!service) {
+      continue;
     }
-  ).services;
 
-  if (services && services.length > 0) {
-    console.log("      │");
+    const last =
+      i === risk.services.length - 1;
 
-    for (let i = 0; i < services.length; i += 1) {
-      const service = services[i];
+    const branch = last
+      ? "└─"
+      : "├─";
 
-      if (!service) {
-        continue;
+    const environment =
+      service.environment
+        ? ` [${service.environment}]`
+        : "";
+
+    const hops =
+      typeof service.hops === "number"
+        ? ` (${service.hops} hop${
+            service.hops === 1
+              ? ""
+              : "s"
+          })`
+        : "";
+
+    console.log(
+      `      │  ${branch} ${service.name}${environment}${hops}`,
+    );
+
+    if (
+      service.reasons &&
+      service.reasons.length > 0
+    ) {
+      for (
+        let j = 0;
+        j < service.reasons.length;
+        j += 1
+      ) {
+        const reason =
+          service.reasons[j];
+
+        if (!reason) {
+          continue;
+        }
+
+        const reasonLast =
+          j ===
+          service.reasons.length - 1;
+
+        const reasonBranch =
+          reasonLast
+            ? "└─"
+            : "├─";
+
+        console.log(
+          `      │     ${reasonBranch} ${reason}`,
+        );
       }
-
-      const last =
-        i === services.length - 1;
-
-      const branch = last
-        ? "└─"
-        : "├─";
-
-      const environment =
-        service.environment
-          ? ` [${service.environment}]`
-          : "";
-
-      const hops =
-        typeof service.hops === "number"
-          ? ` (${service.hops} hop${service.hops === 1 ? "" : "s"})`
-          : "";
-
-      console.log(
-        `      │  ${branch} ${service.name}${environment}${hops}`,
-      );
     }
   }
 
   console.log(
-    `      └─ ${packageName}@${version}`,
+    "      └────────────────────────",
   );
 }
 
@@ -155,11 +174,9 @@ export async function scanCommand(
   console.log(
     `Project: ${options.path}`,
   );
-
   console.log(
     `Depth:   ${depth}`,
   );
-
   console.log("");
 
   const result = await scanProject(
@@ -214,9 +231,10 @@ export async function scanCommand(
       });
 
       console.log(
-        `${printSeverity(risk.severity)} (${risk.score}/100)`,
+        `${printSeverity(
+          risk.severity,
+        )} (${risk.score}/100)`,
       );
-
     } catch (error) {
       console.log("? unavailable");
 
@@ -232,54 +250,57 @@ export async function scanCommand(
     }
   }
 
-  /*
-   * ========================================================
-   * SORT
-   * ========================================================
-   */
+  // ========================================================
+  // SORT
+  // ========================================================
 
   const sorted = [...results].sort(
     (a, b) =>
-      severityRank(b.risk.severity) -
-        severityRank(a.risk.severity) ||
-      b.risk.score - a.risk.score,
+      severityRank(
+        b.risk.severity,
+      ) -
+        severityRank(
+          a.risk.severity,
+        ) ||
+      b.risk.score -
+        a.risk.score,
   );
 
-  /*
-   * ========================================================
-   * COUNTS
-   * ========================================================
-   */
+  // ========================================================
+  // COUNTS
+  // ========================================================
 
   const critical =
     results.filter(
       (item) =>
-        item.risk.severity === "CRITICAL",
+        item.risk.severity ===
+        "CRITICAL",
     );
 
   const high =
     results.filter(
       (item) =>
-        item.risk.severity === "HIGH",
+        item.risk.severity ===
+        "HIGH",
     );
 
   const medium =
     results.filter(
       (item) =>
-        item.risk.severity === "MEDIUM",
+        item.risk.severity ===
+        "MEDIUM",
     );
 
   const low =
     results.filter(
       (item) =>
-        item.risk.severity === "LOW",
+        item.risk.severity ===
+        "LOW",
     );
 
-  /*
-   * ========================================================
-   * SUMMARY
-   * ========================================================
-   */
+  // ========================================================
+  // SUMMARY
+  // ========================================================
 
   console.log("");
   console.log(
@@ -291,7 +312,6 @@ export async function scanCommand(
   console.log(
     "══════════════════════════════════════════════",
   );
-
   console.log("");
 
   console.log(
@@ -314,37 +334,27 @@ export async function scanCommand(
     `Low:      ${low.length}`,
   );
 
-  /*
-   * ========================================================
-   * TOP RISKS
-   * ========================================================
-   */
+  // ========================================================
+  // TOP RISKS
+  // ========================================================
 
   if (sorted.length > 0) {
     console.log("");
-    console.log(
-      "Top risks:",
-    );
+    console.log("Top risks:");
     console.log("");
 
     for (
       const item of sorted.slice(0, 10)
     ) {
       console.log(
-        `  ${printSeverity(item.risk.severity)} ${item.name}@${item.version} — ${item.risk.score}/100`,
+        `  ${printSeverity(
+          item.risk.severity,
+        )} ${item.name}@${item.version} — ${item.risk.score}/100`,
       );
 
       if (
         item.risk.affectedServices > 0
       ) {
-        console.log(
-          `      affected services: ${item.risk.affectedServices}`,
-        );
-
-        console.log(
-          `      production services: ${item.risk.productionServices}`,
-        );
-
         printRiskRelationship(
           item.risk,
           item.name,
@@ -356,11 +366,9 @@ export async function scanCommand(
     }
   }
 
-  /*
-   * ========================================================
-   * DASHBOARD
-   * ========================================================
-   */
+  // ========================================================
+  // DASHBOARD
+  // ========================================================
 
   console.log(
     "Dashboard:",
@@ -370,11 +378,9 @@ export async function scanCommand(
     "http://localhost:3001",
   );
 
-  /*
-   * ========================================================
-   * CI EXIT CODE
-   * ========================================================
-   */
+  // ========================================================
+  // CI EXIT CODE
+  // ========================================================
 
   if (critical.length > 0) {
     console.log("");
@@ -397,3 +403,4 @@ export async function scanCommand(
     );
   }
 }
+
