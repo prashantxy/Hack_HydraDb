@@ -86,7 +86,7 @@ function stableNumericId(key: string): number {
   return (hash >>> 0) + 1;
 }
 
-function packageId(
+export function packageId(
   packageName: string,
 ): number {
   return stableNumericId(
@@ -94,7 +94,7 @@ function packageId(
   );
 }
 
-function versionId(
+export function versionId(
   packageName: string,
   version: string,
 ): number {

@@ -35,6 +35,11 @@ import {
 } from "./routes/attack-path";
 
 import {
+  registerServiceRoute,
+  servicesRoute,
+} from "./routes/service";
+
+import {
   errorResponse,
 } from "./response";
 
@@ -53,7 +58,7 @@ export async function router(
       headers: {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods":
-          "GET, OPTIONS",
+          "GET, POST, OPTIONS",
         "Access-Control-Allow-Headers":
           "Content-Type, Authorization",
       },
@@ -61,7 +66,19 @@ export async function router(
   }
 
   // ==========================================================
-  // ONLY GET ROUTES
+  // POST /services
+  // Register a service and its dependencies
+  // ==========================================================
+
+  if (
+    url.pathname === "/services" &&
+    req.method === "POST"
+  ) {
+    return registerServiceRoute(req);
+  }
+
+  // ==========================================================
+  // ONLY GET ROUTES AFTER THIS POINT
   // ==========================================================
 
   if (req.method !== "GET") {
@@ -77,6 +94,14 @@ export async function router(
 
   if (url.pathname === "/health") {
     return healthRoute();
+  }
+
+  // ==========================================================
+  // GET /services
+  // ==========================================================
+
+  if (url.pathname === "/services") {
+    return servicesRoute();
   }
 
   // ==========================================================

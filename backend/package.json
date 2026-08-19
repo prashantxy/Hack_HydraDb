@@ -10,6 +10,7 @@
     "test:resolver": "bun scripts/test-resolver.ts"
   },
   "dependencies": {
+    "axios": "1.7.2",
     "dotenv": "^17.2.1",
     "semver": "^7.7.2"
   },
