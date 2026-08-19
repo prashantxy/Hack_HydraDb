@@ -1,8 +1,6 @@
-#!/usr/bin/env bun
 
-import {
-  Command,
-} from "commander";
+
+import { Command } from "commander";
 
 import {
   scanCommand,
@@ -12,8 +10,11 @@ import {
   checkCommand,
 } from "./command/check";
 
-const program =
-  new Command();
+import {
+  githubLoginCommand,
+} from "./command/github";
+
+const program = new Command();
 
 program
   .name("chaintrace")
@@ -22,17 +23,15 @@ program
   )
   .version("0.1.0");
 
-/*
- * ==========================================================
- * SCAN
- * ==========================================================
- *
- * chaintrace scan
- * chaintrace scan --path ./backend
- * chaintrace scan --path ./backend --depth 5
- *
- * ==========================================================
- */
+// ==========================================================
+// SCAN
+// ==========================================================
+//
+// chaintrace scan
+// chaintrace scan --path ./backend
+// chaintrace scan --path ./backend --depth 5
+//
+// ==========================================================
 
 program
   .command("scan")
@@ -52,9 +51,7 @@ program
   .action(
     async (options) => {
       try {
-        await scanCommand(
-          options,
-        );
+        await scanCommand(options);
       } catch (error) {
         console.error(
           "Scan failed:",
@@ -68,17 +65,15 @@ program
     },
   );
 
-/*
- * ==========================================================
- * CHECK
- * ==========================================================
- *
- * chaintrace check axios@1.7.2
- * chaintrace check react@19.2.8
- * chaintrace check axios@1.7.2 --depth 10
- *
- * ==========================================================
- */
+// ==========================================================
+// CHECK
+// ==========================================================
+//
+// chaintrace check axios@1.7.2
+// chaintrace check react@19.2.8
+// chaintrace check axios@1.7.2 --depth 10
+//
+// ==========================================================
 
 program
   .command("check")
@@ -117,6 +112,33 @@ program
     },
   );
 
+// ==========================================================
+// GITHUB LOGIN
+// ==========================================================
+//
+// chaintrace github login
+//
+// ==========================================================
+
+const githubCommand =
+  program
+    .command("github")
+    .description(
+      "GitHub authentication and repository operations",
+    );
+
+githubCommand
+  .command("login")
+  .description(
+    "Authenticate ChainTrace with GitHub",
+  )
+  .action(
+    async () => {
+      await githubLoginCommand();
+    },
+  );
+
 await program.parseAsync(
   process.argv,
 );
+
