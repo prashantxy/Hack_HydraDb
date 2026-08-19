@@ -19,6 +19,10 @@ import {
 } from "./routes/blast-radius";
 
 import {
+  riskRoute,
+} from "./routes/risk";
+
+import {
   errorResponse,
 } from "./response";
 
@@ -27,9 +31,9 @@ export async function router(
 ): Promise<Response> {
   const url = new URL(req.url);
 
-  // ----------------------------------------
-  // CORS preflight
-  // ----------------------------------------
+  // ==========================================================
+  // CORS PREFLIGHT
+  // ==========================================================
 
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -44,9 +48,9 @@ export async function router(
     });
   }
 
-  // ----------------------------------------
-  // Only GET routes for now
-  // ----------------------------------------
+  // ==========================================================
+  // ONLY GET ROUTES
+  // ==========================================================
 
   if (req.method !== "GET") {
     return errorResponse(
@@ -55,116 +59,299 @@ export async function router(
     );
   }
 
-  // ----------------------------------------
+  // ==========================================================
   // GET /health
-  // ----------------------------------------
+  // ==========================================================
 
   if (url.pathname === "/health") {
     return healthRoute();
   }
 
-  // ----------------------------------------
-  // /packages/*
-  // ----------------------------------------
+  // ==========================================================
+  // PACKAGE ROUTES
+  // ==========================================================
 
   const packagesPrefix = "/packages/";
-  const graphSuffix = "/graph";
 
-  // GET /packages/:packageName/graph
   if (
-    url.pathname.startsWith(packagesPrefix) &&
-    url.pathname.endsWith(graphSuffix)
+    url.pathname.startsWith(
+      packagesPrefix,
+    )
   ) {
-    const packageName = decodeURIComponent(
+    const packagePath =
       url.pathname.slice(
         packagesPrefix.length,
-        -graphSuffix.length,
-      ),
-    );
+      );
 
-    const depth =
-      url.searchParams.get("depth") ??
-      undefined;
+    // --------------------------------------------------------
+    // GET /packages/:packageName/graph
+    // --------------------------------------------------------
 
-    return graphRoute(
+    const graphSuffix = "/graph";
+
+    if (
+      packagePath.endsWith(
+        graphSuffix,
+      )
+    ) {
+      const packageName =
+        decodeURIComponent(
+          packagePath.slice(
+            0,
+            -graphSuffix.length,
+          ),
+        );
+
+      if (!packageName) {
+        return errorResponse(
+          "Package name is required",
+          400,
+        );
+      }
+
+      const depth =
+        url.searchParams.get(
+          "depth",
+        ) ?? undefined;
+
+      return graphRoute(
+        packageName,
+        depth,
+      );
+    }
+
+    // --------------------------------------------------------
+    // GET /packages/:packageName/:version/risk
+    // --------------------------------------------------------
+    //
+    // Example:
+    //
+    // /packages/axios/1.7.2/risk?depth=5
+    //
+    // Internally:
+    //
+    // npm:axios@1.7.2
+    //
+    // --------------------------------------------------------
+
+    const riskSuffix = "/risk";
+
+    if (
+      packagePath.endsWith(
+        riskSuffix,
+      )
+    ) {
+      const packageVersionPath =
+        packagePath.slice(
+          0,
+          -riskSuffix.length,
+        );
+
+      const separatorIndex =
+        packageVersionPath.lastIndexOf(
+          "/",
+        );
+
+      if (separatorIndex === -1) {
+        return errorResponse(
+          "Expected /packages/:packageName/:version/risk",
+          400,
+        );
+      }
+
+      const packageName =
+        decodeURIComponent(
+          packageVersionPath.slice(
+            0,
+            separatorIndex,
+          ),
+        );
+
+      const version =
+        decodeURIComponent(
+          packageVersionPath.slice(
+            separatorIndex + 1,
+          ),
+        );
+
+      if (!packageName) {
+        return errorResponse(
+          "Package name is required",
+          400,
+        );
+      }
+
+      if (!version) {
+        return errorResponse(
+          "Version is required",
+          400,
+        );
+      }
+
+      const depth =
+        url.searchParams.get(
+          "depth",
+        ) ?? undefined;
+
+      const versionKey =
+        `npm:${packageName}@${version}`;
+
+      return riskRoute(
+        versionKey,
+        depth,
+      );
+    }
+
+    // --------------------------------------------------------
+    // GET /packages/:packageName
+    // --------------------------------------------------------
+
+    const packageName =
+      decodeURIComponent(
+        packagePath,
+      );
+
+    if (!packageName) {
+      return errorResponse(
+        "Package name is required",
+        400,
+      );
+    }
+
+    return packageRoute(
       packageName,
-      depth,
     );
   }
 
-  // GET /packages/:packageName
-  if (
-    url.pathname.startsWith(packagesPrefix)
-  ) {
-    const packageName = decodeURIComponent(
-      url.pathname.slice(
-        packagesPrefix.length,
-      ),
-    );
+  // ==========================================================
+  // VERSION ROUTES
+  // ==========================================================
 
-    return packageRoute(packageName);
-  }
-
-  // ----------------------------------------
-  // /versions/*
-  // ----------------------------------------
-
-  const versionsPrefix = "/versions/";
-
-  // GET /versions/:versionKey/dependencies
-  const dependenciesSuffix = "/dependencies";
+  const versionsPrefix =
+    "/versions/";
 
   if (
-    url.pathname.startsWith(versionsPrefix) &&
-    url.pathname.endsWith(
-      dependenciesSuffix,
+    url.pathname.startsWith(
+      versionsPrefix,
     )
   ) {
-    const versionKey = decodeURIComponent(
+    const versionPath =
       url.pathname.slice(
         versionsPrefix.length,
-        -dependenciesSuffix.length,
-      ),
-    );
+      );
 
-    return versionDependenciesRoute(
-      versionKey,
-    );
+    // --------------------------------------------------------
+    // GET /versions/:versionKey/dependencies
+    // --------------------------------------------------------
+
+    const dependenciesSuffix =
+      "/dependencies";
+
+    if (
+      versionPath.endsWith(
+        dependenciesSuffix,
+      )
+    ) {
+      const versionKey =
+        decodeURIComponent(
+          versionPath.slice(
+            0,
+            -dependenciesSuffix.length,
+          ),
+        );
+
+      if (!versionKey) {
+        return errorResponse(
+          "Version key is required",
+          400,
+        );
+      }
+
+      return versionDependenciesRoute(
+        versionKey,
+      );
+    }
+
+    // --------------------------------------------------------
+    // GET /versions/:versionKey/blast-radius
+    // --------------------------------------------------------
+
+    const blastRadiusSuffix =
+      "/blast-radius";
+
+    if (
+      versionPath.endsWith(
+        blastRadiusSuffix,
+      )
+    ) {
+      const versionKey =
+        decodeURIComponent(
+          versionPath.slice(
+            0,
+            -blastRadiusSuffix.length,
+          ),
+        );
+
+      if (!versionKey) {
+        return errorResponse(
+          "Version key is required",
+          400,
+        );
+      }
+
+      const depth =
+        url.searchParams.get(
+          "depth",
+        ) ?? undefined;
+
+      return blastRadiusRoute(
+        versionKey,
+        depth,
+      );
+    }
+
+    // --------------------------------------------------------
+    // GET /versions/:versionKey/risk
+    // --------------------------------------------------------
+
+    const riskSuffix =
+      "/risk";
+
+    if (
+      versionPath.endsWith(
+        riskSuffix,
+      )
+    ) {
+      const versionKey =
+        decodeURIComponent(
+          versionPath.slice(
+            0,
+            -riskSuffix.length,
+          ),
+        );
+
+      if (!versionKey) {
+        return errorResponse(
+          "Version key is required",
+          400,
+        );
+      }
+
+      const depth =
+        url.searchParams.get(
+          "depth",
+        ) ?? undefined;
+
+      return riskRoute(
+        versionKey,
+        depth,
+      );
+    }
   }
 
-  // ----------------------------------------
-  // GET /versions/:versionKey/blast-radius
-  // ----------------------------------------
-
-  const blastRadiusSuffix =
-    "/blast-radius";
-
-  if (
-    url.pathname.startsWith(versionsPrefix) &&
-    url.pathname.endsWith(
-      blastRadiusSuffix,
-    )
-  ) {
-    const versionKey = decodeURIComponent(
-      url.pathname.slice(
-        versionsPrefix.length,
-        -blastRadiusSuffix.length,
-      ),
-    );
-
-    const depth =
-      url.searchParams.get("depth") ??
-      undefined;
-
-    return blastRadiusRoute(
-      versionKey,
-      depth,
-    );
-  }
-
-  // ----------------------------------------
+  // ==========================================================
   // 404
-  // ----------------------------------------
+  // ==========================================================
 
   return errorResponse(
     "Route not found",
