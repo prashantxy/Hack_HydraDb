@@ -1,12 +1,19 @@
 {
-  "name": "cli",
-  "module": "index.ts",
-  "type": "module",
-  "private": true,
-  "devDependencies": {
-    "@types/bun": "latest"
+  "name": "chaintrace",
+  "version": "0.1.0",
+  "description": "Software supply-chain security CLI",
+  "bin": {
+    "chaintrace": "./dist/index.js"
   },
-  "peerDependencies": {
-    "typescript": "^5"
+  "scripts": {
+    "dev": "bun run src/index.ts",
+    "build": "bun build src/index.ts --compile --outfile dist/chaintrace"
+  },
+  "dependencies": {
+    "commander": "^15.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.0.0"
   }
 }
