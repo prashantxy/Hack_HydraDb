@@ -26,6 +26,10 @@ import {
   errorResponse,
 } from "./response";
 
+import {
+  attackPathRoute,
+} from "./routes/attack-path";
+
 export async function router(
   req: Request,
 ): Promise<Response> {
@@ -122,16 +126,6 @@ export async function router(
 
     // --------------------------------------------------------
     // GET /packages/:packageName/:version/risk
-    // --------------------------------------------------------
-    //
-    // Example:
-    //
-    // /packages/axios/1.7.2/risk?depth=5
-    //
-    // Internally:
-    //
-    // npm:axios@1.7.2
-    //
     // --------------------------------------------------------
 
     const riskSuffix = "/risk";
@@ -347,10 +341,54 @@ export async function router(
         depth,
       );
     }
+
+    // --------------------------------------------------------
+    // GET /versions/:versionKey/attack-path
+    // --------------------------------------------------------
+
+    const attackPathSuffix =
+      "/attack-path";
+
+    if (
+      versionPath.endsWith(
+        attackPathSuffix,
+      )
+    ) {
+      const versionKey =
+        decodeURIComponent(
+          versionPath.slice(
+            0,
+            -attackPathSuffix.length,
+          ),
+        );
+
+      if (!versionKey) {
+        return errorResponse(
+          "Version key is required",
+          400,
+        );
+      }
+
+      const depth =
+        url.searchParams.get(
+          "depth",
+        ) ?? undefined;
+
+      return attackPathRoute(
+        versionKey,
+        depth,
+      );
+    }
+
+    // Nothing matched inside /versions/*
+    return errorResponse(
+      "Route not found",
+      404,
+    );
   }
 
   // ==========================================================
-  // 404
+  // GLOBAL 404
   // ==========================================================
 
   return errorResponse(
