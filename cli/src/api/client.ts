@@ -37,6 +37,7 @@ export interface PackageAnalysis {
 
   blastRadius: {
     affectedServices: number;
+
     productionServices: number;
 
     services: Array<{
@@ -91,11 +92,9 @@ const API_URL =
   process.env.CHAINTRACE_API_URL ??
   "http://localhost:3000";
 
-/*
- * ==========================================================
+/* ==========================================================
  * URL BUILDER
- * ==========================================================
- */
+ * ========================================================== */
 
 function buildUrl(
   packageName: string,
@@ -112,20 +111,16 @@ function buildUrl(
   );
 }
 
-/*
- * ==========================================================
+/* ==========================================================
  * GENERIC REQUEST
- * ==========================================================
- */
+ * ========================================================== */
 
 async function request<T>(
   url: string,
 ): Promise<T> {
-  const response =
-    await fetch(url);
+  const response = await fetch(url);
 
-  const body =
-    await response.text();
+  const body = await response.text();
 
   if (!response.ok) {
     throw new Error(
@@ -142,95 +137,76 @@ async function request<T>(
   }
 }
 
-/*
- * ==========================================================
+/* ==========================================================
  * RISK
- * ==========================================================
- */
+ * ========================================================== */
 
 export async function getPackageRisk(
   packageName: string,
   version: string,
   depth = 5,
 ): Promise<PackageRiskResponse> {
-  const url =
-    buildUrl(
-      packageName,
-      version,
-      "risk",
-      depth,
-    );
-
-  return request<PackageRiskResponse>(
-    url,
+  const url = buildUrl(
+    packageName,
+    version,
+    "risk",
+    depth,
   );
+
+  return request<PackageRiskResponse>(url);
 }
 
-/*
- * ==========================================================
+/* ==========================================================
  * FULL ANALYSIS
- * ==========================================================
- */
+ * ========================================================== */
 
 export async function checkPackage(
   packageName: string,
   version: string,
   depth = 5,
 ): Promise<PackageAnalysis> {
-  const url =
-    buildUrl(
-      packageName,
-      version,
-      "analysis",
-      depth,
-    );
-
-  return request<PackageAnalysis>(
-    url,
+  const url = buildUrl(
+    packageName,
+    version,
+    "analysis",
+    depth,
   );
+
+  return request<PackageAnalysis>(url);
 }
 
-/*
- * ==========================================================
+/* ==========================================================
  * INGEST PACKAGE
- * ==========================================================
  *
  * GET:
- *
  * /packages/:packageName/:version/ingest
  *
- * This is used when the package/version does not
- * exist in HydraDB yet.
- */
+ * Used when the package/version does not exist
+ * in HydraDB yet.
+ * ========================================================== */
 
 export async function ingestPackage(
   packageName: string,
   version: string,
   depth = 3,
 ): Promise<IngestResponse> {
-  const url =
-    buildUrl(
-      packageName,
-      version,
-      "ingest",
-      depth,
-    );
-
-  return request<IngestResponse>(
-    url,
+  const url = buildUrl(
+    packageName,
+    version,
+    "ingest",
+    depth,
   );
+
+  return request<IngestResponse>(url);
 }
 
-/*
- * ==========================================================
+/* ==========================================================
  * ENSURE PACKAGE EXISTS
- * ==========================================================
  *
- * Try analysis first.
- *
- * If the package isn't present in HydraDB,
- * ingest it and retry.
- */
+ * 1. Try analysis.
+ * 2. If package/version is missing, ingest it.
+ * 3. Retry analysis.
+ * ========================================================== */
 
 export async function ensurePackage(
   packageName: string,
@@ -249,19 +225,9 @@ export async function ensurePackage(
         ? error.message
         : String(error);
 
-    /*
-     * Only auto-ingest when the backend
-     * explicitly tells us the version
-     * is missing.
-     */
-
     if (
-      !message.includes(
-        "Version not found",
-      ) &&
-      !message.includes(
-        "Package not found",
-      )
+      !message.includes("Version not found") &&
+      !message.includes("Package not found")
     ) {
       throw error;
     }
@@ -280,11 +246,9 @@ export async function ensurePackage(
   }
 }
 
-/*
- * ==========================================================
+/* ==========================================================
  * MULTIPLE PACKAGES
- * ==========================================================
- */
+ * ========================================================== */
 
 export async function checkPackages(
   dependencies: Array<{
@@ -295,17 +259,13 @@ export async function checkPackages(
 ): Promise<PackageAnalysis[]> {
   const results: PackageAnalysis[] = [];
 
-  for (
-    const dependency
-    of dependencies
-  ) {
+  for (const dependency of dependencies) {
     try {
-      const result =
-        await ensurePackage(
-          dependency.name,
-          dependency.version,
-          depth,
-        );
+      const result = await ensurePackage(
+        dependency.name,
+        dependency.version,
+        depth,
+      );
 
       results.push(result);
     } catch (error) {
@@ -313,9 +273,7 @@ export async function checkPackages(
         `Failed to analyze ${dependency.name}@${dependency.version}`,
       );
 
-      if (
-        process.env.CHAINTRACE_DEBUG
-      ) {
+      if (process.env.CHAINTRACE_DEBUG) {
         console.error(error);
       }
     }

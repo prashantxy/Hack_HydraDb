@@ -18,16 +18,12 @@ function severityRank(
   switch (severity) {
     case "CRITICAL":
       return 4;
-
     case "HIGH":
       return 3;
-
     case "MEDIUM":
       return 2;
-
     case "LOW":
       return 1;
-
     default:
       return 0;
   }
@@ -39,26 +35,101 @@ function printSeverity(
   switch (severity) {
     case "CRITICAL":
       return "✗ CRITICAL";
-
     case "HIGH":
       return "⚠ HIGH";
-
     case "MEDIUM":
       return "⚠ MEDIUM";
-
     case "LOW":
       return "✓ LOW";
-
     default:
       return "? UNKNOWN";
   }
 }
 
+function printRiskRelationship(
+  risk: PackageRiskResponse,
+  packageName: string,
+  version: string,
+): void {
+  if (risk.affectedServices <= 0) {
+    return;
+  }
+
+  console.log("");
+  console.log("      ┌─ BLAST RADIUS");
+  console.log(
+    `      │ affected services: ${risk.affectedServices}`,
+  );
+  console.log(
+    `      │ production services: ${risk.productionServices}`,
+  );
+
+  /*
+   * If your API later exposes the actual services array,
+   * render the complete relationship here.
+   *
+   * Example:
+   *
+   * services: [
+   *   {
+   *     name: "checkout-service",
+   *     environment: "production",
+   *     hops: 1
+   *   }
+   * ]
+   */
+  const services = (
+    risk as PackageRiskResponse & {
+      services?: Array<{
+        name: string;
+        environment?: string;
+        hops?: number;
+      }>;
+    }
+  ).services;
+
+  if (services && services.length > 0) {
+    console.log("      │");
+
+    for (let i = 0; i < services.length; i += 1) {
+      const service = services[i];
+
+      if (!service) {
+        continue;
+      }
+
+      const last =
+        i === services.length - 1;
+
+      const branch = last
+        ? "└─"
+        : "├─";
+
+      const environment =
+        service.environment
+          ? ` [${service.environment}]`
+          : "";
+
+      const hops =
+        typeof service.hops === "number"
+          ? ` (${service.hops} hop${service.hops === 1 ? "" : "s"})`
+          : "";
+
+      console.log(
+        `      │  ${branch} ${service.name}${environment}${hops}`,
+      );
+    }
+  }
+
+  console.log(
+    `      └─ ${packageName}@${version}`,
+  );
+}
+
 export async function scanCommand(
   options: ScanOptions,
 ): Promise<void> {
-  const depth =
-    Number(options.depth);
+  const depth = Number(options.depth);
 
   if (
     !Number.isInteger(depth) ||
@@ -69,23 +140,38 @@ export async function scanCommand(
     );
   }
 
+  console.log("");
   console.log(
-    `Scanning project: ${options.path}`,
+    "╔══════════════════════════════════════════════╗",
+  );
+  console.log(
+    "║              ChainTrace Scan                 ║",
+  );
+  console.log(
+    "╚══════════════════════════════════════════════╝",
+  );
+  console.log("");
+
+  console.log(
+    `Project: ${options.path}`,
   );
 
-  const result =
-    await scanProject(
-      options.path,
-    );
+  console.log(
+    `Depth:   ${depth}`,
+  );
 
   console.log("");
+
+  const result = await scanProject(
+    options.path,
+  );
 
   console.log(
     `Lockfile: ${result.lockfile.type}`,
   );
 
   console.log(
-    `Path: ${result.lockfile.path}`,
+    `Path:     ${result.lockfile.path}`,
   );
 
   console.log(
@@ -93,11 +179,9 @@ export async function scanCommand(
   );
 
   console.log("");
-
   console.log(
     "Analyzing dependency risk...",
   );
-
   console.log("");
 
   const results: Array<{
@@ -106,29 +190,14 @@ export async function scanCommand(
     risk: PackageRiskResponse;
   }> = [];
 
-  /*
-   * ========================================================
-   * ANALYZE DEPENDENCIES
-   * ========================================================
-   */
-
   for (
-    const dependency
-    of result.dependencies
+    const dependency of result.dependencies
   ) {
     process.stdout.write(
       `  ${dependency.name}@${dependency.version} ... `,
     );
 
     try {
-      /*
-       * ensurePackage() does:
-       *
-       * 1. Check whether package exists
-       * 2. If missing, ingest it
-       * 3. Analyze it again
-       */
-
       const analysis =
         await ensurePackage(
           dependency.name,
@@ -136,28 +205,20 @@ export async function scanCommand(
           depth,
         );
 
-      const risk =
-        analysis.risk;
+      const risk = analysis.risk;
 
       results.push({
-        name:
-          dependency.name,
-
-        version:
-          dependency.version,
-
+        name: dependency.name,
+        version: dependency.version,
         risk,
       });
 
       console.log(
-        `${printSeverity(
-          risk.severity,
-        )} (${risk.score}/100)`,
+        `${printSeverity(risk.severity)} (${risk.score}/100)`,
       );
+
     } catch (error) {
-      console.log(
-        "? unavailable",
-      );
+      console.log("? unavailable");
 
       if (
         process.env.CHAINTRACE_DEBUG
@@ -177,18 +238,12 @@ export async function scanCommand(
    * ========================================================
    */
 
-  const sorted =
-    [...results].sort(
-      (a, b) =>
-        severityRank(
-          b.risk.severity,
-        ) -
-          severityRank(
-            a.risk.severity,
-          ) ||
-        b.risk.score -
-          a.risk.score,
-    );
+  const sorted = [...results].sort(
+    (a, b) =>
+      severityRank(b.risk.severity) -
+        severityRank(a.risk.severity) ||
+      b.risk.score - a.risk.score,
+  );
 
   /*
    * ========================================================
@@ -199,29 +254,25 @@ export async function scanCommand(
   const critical =
     results.filter(
       (item) =>
-        item.risk.severity ===
-        "CRITICAL",
+        item.risk.severity === "CRITICAL",
     );
 
   const high =
     results.filter(
       (item) =>
-        item.risk.severity ===
-        "HIGH",
+        item.risk.severity === "HIGH",
     );
 
   const medium =
     results.filter(
       (item) =>
-        item.risk.severity ===
-        "MEDIUM",
+        item.risk.severity === "MEDIUM",
     );
 
   const low =
     results.filter(
       (item) =>
-        item.risk.severity ===
-        "LOW",
+        item.risk.severity === "LOW",
     );
 
   /*
@@ -231,17 +282,14 @@ export async function scanCommand(
    */
 
   console.log("");
-
   console.log(
-    "════════════════════════════════════════",
+    "══════════════════════════════════════════════",
   );
-
   console.log(
-    "ChainTrace Security Summary",
+    "             ChainTrace Security Summary",
   );
-
   console.log(
-    "════════════════════════════════════════",
+    "══════════════════════════════════════════════",
   );
 
   console.log("");
@@ -274,23 +322,16 @@ export async function scanCommand(
 
   if (sorted.length > 0) {
     console.log("");
-
     console.log(
       "Top risks:",
     );
-
     console.log("");
 
     for (
-      const item of sorted.slice(
-        0,
-        10,
-      )
+      const item of sorted.slice(0, 10)
     ) {
       console.log(
-        `  ${printSeverity(
-          item.risk.severity,
-        )} ${item.name}@${item.version} — ${item.risk.score}/100`,
+        `  ${printSeverity(item.risk.severity)} ${item.name}@${item.version} — ${item.risk.score}/100`,
       );
 
       if (
@@ -303,7 +344,15 @@ export async function scanCommand(
         console.log(
           `      production services: ${item.risk.productionServices}`,
         );
+
+        printRiskRelationship(
+          item.risk,
+          item.name,
+          item.version,
+        );
       }
+
+      console.log("");
     }
   }
 
@@ -312,8 +361,6 @@ export async function scanCommand(
    * DASHBOARD
    * ========================================================
    */
-
-  console.log("");
 
   console.log(
     "Dashboard:",
@@ -329,21 +376,15 @@ export async function scanCommand(
    * ========================================================
    */
 
-  if (
-    critical.length > 0
-  ) {
+  if (critical.length > 0) {
     console.log("");
-
     console.log(
       "✗ CRITICAL supply-chain risks detected.",
     );
 
     process.exitCode = 2;
-  } else if (
-    high.length > 0
-  ) {
+  } else if (high.length > 0) {
     console.log("");
-
     console.log(
       "⚠ HIGH supply-chain risks detected.",
     );
@@ -351,7 +392,6 @@ export async function scanCommand(
     process.exitCode = 1;
   } else {
     console.log("");
-
     console.log(
       "✓ No high-risk dependencies detected.",
     );
