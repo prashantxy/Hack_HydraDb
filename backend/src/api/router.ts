@@ -7,6 +7,10 @@ import {
 } from "./routes/packages";
 
 import {
+  analysisRoute,
+} from "./routes/analysis";
+
+import {
   versionDependenciesRoute,
 } from "./routes/versions";
 
@@ -23,12 +27,12 @@ import {
 } from "./routes/risk";
 
 import {
-  errorResponse,
-} from "./response";
-
-import {
   attackPathRoute,
 } from "./routes/attack-path";
+
+import {
+  errorResponse,
+} from "./response";
 
 export async function router(
   req: Request,
@@ -120,6 +124,89 @@ export async function router(
 
       return graphRoute(
         packageName,
+        depth,
+      );
+    }
+
+    // --------------------------------------------------------
+    // GET /packages/:packageName/:version/analysis
+    // --------------------------------------------------------
+    //
+    // Example:
+    //
+    // /packages/axios/1.7.2/analysis?depth=5
+    //
+    // Internally:
+    //
+    // npm:axios@1.7.2
+    //
+    // --------------------------------------------------------
+
+    const analysisSuffix =
+      "/analysis";
+
+    if (
+      packagePath.endsWith(
+        analysisSuffix,
+      )
+    ) {
+      const packageVersionPath =
+        packagePath.slice(
+          0,
+          -analysisSuffix.length,
+        );
+
+      const separatorIndex =
+        packageVersionPath.lastIndexOf(
+          "/",
+        );
+
+      if (separatorIndex === -1) {
+        return errorResponse(
+          "Expected /packages/:packageName/:version/analysis",
+          400,
+        );
+      }
+
+      const packageName =
+        decodeURIComponent(
+          packageVersionPath.slice(
+            0,
+            separatorIndex,
+          ),
+        );
+
+      const version =
+        decodeURIComponent(
+          packageVersionPath.slice(
+            separatorIndex + 1,
+          ),
+        );
+
+      if (!packageName) {
+        return errorResponse(
+          "Package name is required",
+          400,
+        );
+      }
+
+      if (!version) {
+        return errorResponse(
+          "Version is required",
+          400,
+        );
+      }
+
+      const depth =
+        url.searchParams.get(
+          "depth",
+        ) ?? undefined;
+
+      const versionKey =
+        `npm:${packageName}@${version}`;
+
+      return analysisRoute(
+        versionKey,
         depth,
       );
     }
