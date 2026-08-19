@@ -3,7 +3,7 @@ import {
 } from "../lockfiles/scan";
 
 import {
-  getPackageRisk,
+  ensurePackage,
   type PackageRiskResponse,
 } from "../api/client";
 
@@ -106,6 +106,12 @@ export async function scanCommand(
     risk: PackageRiskResponse;
   }> = [];
 
+  /*
+   * ========================================================
+   * ANALYZE DEPENDENCIES
+   * ========================================================
+   */
+
   for (
     const dependency
     of result.dependencies
@@ -115,12 +121,23 @@ export async function scanCommand(
     );
 
     try {
-      const risk =
-        await getPackageRisk(
+      /*
+       * ensurePackage() does:
+       *
+       * 1. Check whether package exists
+       * 2. If missing, ingest it
+       * 3. Analyze it again
+       */
+
+      const analysis =
+        await ensurePackage(
           dependency.name,
           dependency.version,
           depth,
         );
+
+      const risk =
+        analysis.risk;
 
       results.push({
         name:
@@ -145,7 +162,11 @@ export async function scanCommand(
       if (
         process.env.CHAINTRACE_DEBUG
       ) {
-        console.error(error);
+        console.error(
+          error instanceof Error
+            ? error.message
+            : error,
+        );
       }
     }
   }

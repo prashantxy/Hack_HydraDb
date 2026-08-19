@@ -64,9 +64,38 @@ export interface PackageAnalysis {
   maxDepth: number;
 }
 
+export interface IngestResponse {
+  success: boolean;
+
+  packageName: string;
+
+  version: string;
+
+  versionKey: string;
+
+  stats: {
+    packages: number;
+    versions: number;
+    dependencyEdges: number;
+    packageVersionEdges: number;
+    maintainers: number;
+    maintainsEdges: number;
+    processedNodes: number;
+    skippedNodes: number;
+    failedNodes: number;
+    maxDepth: number;
+  };
+}
+
 const API_URL =
   process.env.CHAINTRACE_API_URL ??
   "http://localhost:3000";
+
+/*
+ * ==========================================================
+ * URL BUILDER
+ * ==========================================================
+ */
 
 function buildUrl(
   packageName: string,
@@ -82,6 +111,12 @@ function buildUrl(
     `?depth=${depth}`
   );
 }
+
+/*
+ * ==========================================================
+ * GENERIC REQUEST
+ * ==========================================================
+ */
 
 async function request<T>(
   url: string,
@@ -157,6 +192,96 @@ export async function checkPackage(
 
 /*
  * ==========================================================
+ * INGEST PACKAGE
+ * ==========================================================
+ *
+ * GET:
+ *
+ * /packages/:packageName/:version/ingest
+ *
+ * This is used when the package/version does not
+ * exist in HydraDB yet.
+ */
+
+export async function ingestPackage(
+  packageName: string,
+  version: string,
+  depth = 3,
+): Promise<IngestResponse> {
+  const url =
+    buildUrl(
+      packageName,
+      version,
+      "ingest",
+      depth,
+    );
+
+  return request<IngestResponse>(
+    url,
+  );
+}
+
+/*
+ * ==========================================================
+ * ENSURE PACKAGE EXISTS
+ * ==========================================================
+ *
+ * Try analysis first.
+ *
+ * If the package isn't present in HydraDB,
+ * ingest it and retry.
+ */
+
+export async function ensurePackage(
+  packageName: string,
+  version: string,
+  depth = 5,
+): Promise<PackageAnalysis> {
+  try {
+    return await checkPackage(
+      packageName,
+      version,
+      depth,
+    );
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : String(error);
+
+    /*
+     * Only auto-ingest when the backend
+     * explicitly tells us the version
+     * is missing.
+     */
+
+    if (
+      !message.includes(
+        "Version not found",
+      ) &&
+      !message.includes(
+        "Package not found",
+      )
+    ) {
+      throw error;
+    }
+
+    await ingestPackage(
+      packageName,
+      version,
+      depth,
+    );
+
+    return checkPackage(
+      packageName,
+      version,
+      depth,
+    );
+  }
+}
+
+/*
+ * ==========================================================
  * MULTIPLE PACKAGES
  * ==========================================================
  */
@@ -176,7 +301,7 @@ export async function checkPackages(
   ) {
     try {
       const result =
-        await checkPackage(
+        await ensurePackage(
           dependency.name,
           dependency.version,
           depth,
