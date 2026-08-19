@@ -7,6 +7,10 @@ import {
 } from "./routes/packages";
 
 import {
+  ingestPackageRoute,
+} from "./routes/ingest";
+
+import {
   analysisRoute,
 } from "./routes/analysis";
 
@@ -91,9 +95,9 @@ export async function router(
         packagesPrefix.length,
       );
 
-    // --------------------------------------------------------
+    // ========================================================
     // GET /packages/:packageName/graph
-    // --------------------------------------------------------
+    // ========================================================
 
     const graphSuffix = "/graph";
 
@@ -128,19 +132,80 @@ export async function router(
       );
     }
 
-    // --------------------------------------------------------
+    // ========================================================
+    // GET /packages/:packageName/:version/ingest
+    // ========================================================
+
+    const ingestSuffix =
+      "/ingest";
+
+    if (
+      packagePath.endsWith(
+        ingestSuffix,
+      )
+    ) {
+      const packageVersionPath =
+        packagePath.slice(
+          0,
+          -ingestSuffix.length,
+        );
+
+      const separatorIndex =
+        packageVersionPath.lastIndexOf(
+          "/",
+        );
+
+      if (separatorIndex === -1) {
+        return errorResponse(
+          "Expected /packages/:packageName/:version/ingest",
+          400,
+        );
+      }
+
+      const packageName =
+        decodeURIComponent(
+          packageVersionPath.slice(
+            0,
+            separatorIndex,
+          ),
+        );
+
+      const version =
+        decodeURIComponent(
+          packageVersionPath.slice(
+            separatorIndex + 1,
+          ),
+        );
+
+      if (!packageName) {
+        return errorResponse(
+          "Package name is required",
+          400,
+        );
+      }
+
+      if (!version) {
+        return errorResponse(
+          "Version is required",
+          400,
+        );
+      }
+
+      const depth =
+        url.searchParams.get(
+          "depth",
+        ) ?? undefined;
+
+      return ingestPackageRoute(
+        packageName,
+        version,
+        depth,
+      );
+    }
+
+    // ========================================================
     // GET /packages/:packageName/:version/analysis
-    // --------------------------------------------------------
-    //
-    // Example:
-    //
-    // /packages/axios/1.7.2/analysis?depth=5
-    //
-    // Internally:
-    //
-    // npm:axios@1.7.2
-    //
-    // --------------------------------------------------------
+    // ========================================================
 
     const analysisSuffix =
       "/analysis";
@@ -211,11 +276,12 @@ export async function router(
       );
     }
 
-    // --------------------------------------------------------
+    // ========================================================
     // GET /packages/:packageName/:version/risk
-    // --------------------------------------------------------
+    // ========================================================
 
-    const riskSuffix = "/risk";
+    const riskSuffix =
+      "/risk";
 
     if (
       packagePath.endsWith(
@@ -283,9 +349,9 @@ export async function router(
       );
     }
 
-    // --------------------------------------------------------
+    // ========================================================
     // GET /packages/:packageName
-    // --------------------------------------------------------
+    // ========================================================
 
     const packageName =
       decodeURIComponent(
@@ -321,9 +387,9 @@ export async function router(
         versionsPrefix.length,
       );
 
-    // --------------------------------------------------------
+    // ========================================================
     // GET /versions/:versionKey/dependencies
-    // --------------------------------------------------------
+    // ========================================================
 
     const dependenciesSuffix =
       "/dependencies";
@@ -353,9 +419,9 @@ export async function router(
       );
     }
 
-    // --------------------------------------------------------
+    // ========================================================
     // GET /versions/:versionKey/blast-radius
-    // --------------------------------------------------------
+    // ========================================================
 
     const blastRadiusSuffix =
       "/blast-radius";
@@ -391,9 +457,9 @@ export async function router(
       );
     }
 
-    // --------------------------------------------------------
+    // ========================================================
     // GET /versions/:versionKey/risk
-    // --------------------------------------------------------
+    // ========================================================
 
     const riskSuffix =
       "/risk";
@@ -429,9 +495,9 @@ export async function router(
       );
     }
 
-    // --------------------------------------------------------
+    // ========================================================
     // GET /versions/:versionKey/attack-path
-    // --------------------------------------------------------
+    // ========================================================
 
     const attackPathSuffix =
       "/attack-path";
@@ -467,7 +533,6 @@ export async function router(
       );
     }
 
-    // Nothing matched inside /versions/*
     return errorResponse(
       "Route not found",
       404,
