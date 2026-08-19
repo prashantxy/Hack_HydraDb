@@ -1,76 +1,338 @@
 import {
-  detectLockfile,
-} from "../lockfiles/detect";
+  scanProject,
+} from "../lockfiles/scan";
 
 import {
-  parseNpmLockfile,
-  type Dependency,
-} from "../lockfiles/npm";
+  getPackageRisk,
+  type PackageRiskResponse,
+} from "../api/client";
 
-import {
-  parseBunLockfile,
-} from "../lockfiles/bun";
-
-export interface ScanResult {
-  lockfile: {
-    type: string;
-    path: string;
-  };
-
-  dependencies: Dependency[];
+interface ScanOptions {
+  path: string;
+  depth: string;
 }
 
-export async function scanProject(
-  cwd = process.cwd(),
-): Promise<ScanResult> {
-  const lockfile =
-    detectLockfile(cwd);
+function severityRank(
+  severity: PackageRiskResponse["severity"],
+): number {
+  switch (severity) {
+    case "CRITICAL":
+      return 4;
 
-  if (!lockfile.path) {
+    case "HIGH":
+      return 3;
+
+    case "MEDIUM":
+      return 2;
+
+    case "LOW":
+      return 1;
+
+    default:
+      return 0;
+  }
+}
+
+function printSeverity(
+  severity: PackageRiskResponse["severity"],
+): string {
+  switch (severity) {
+    case "CRITICAL":
+      return "✗ CRITICAL";
+
+    case "HIGH":
+      return "⚠ HIGH";
+
+    case "MEDIUM":
+      return "⚠ MEDIUM";
+
+    case "LOW":
+      return "✓ LOW";
+
+    default:
+      return "? UNKNOWN";
+  }
+}
+
+export async function scanCommand(
+  options: ScanOptions,
+): Promise<void> {
+  const depth =
+    Number(options.depth);
+
+  if (
+    !Number.isInteger(depth) ||
+    depth < 0
+  ) {
     throw new Error(
-      "No supported lockfile found. Expected package-lock.json, bun.lock, pnpm-lock.yaml or yarn.lock",
+      "Depth must be a non-negative integer",
     );
   }
 
-  let dependencies: Dependency[] = [];
+  console.log(
+    `Scanning project: ${options.path}`,
+  );
 
-  switch (lockfile.type) {
-    case "npm":
-      dependencies =
-        await parseNpmLockfile(
-          lockfile.path,
+  const result =
+    await scanProject(
+      options.path,
+    );
+
+  console.log("");
+
+  console.log(
+    `Lockfile: ${result.lockfile.type}`,
+  );
+
+  console.log(
+    `Path: ${result.lockfile.path}`,
+  );
+
+  console.log(
+    `Dependencies found: ${result.dependencies.length}`,
+  );
+
+  console.log("");
+
+  console.log(
+    "Analyzing dependency risk...",
+  );
+
+  console.log("");
+
+  const results: Array<{
+    name: string;
+    version: string;
+    risk: PackageRiskResponse;
+  }> = [];
+
+  for (
+    const dependency
+    of result.dependencies
+  ) {
+    process.stdout.write(
+      `  ${dependency.name}@${dependency.version} ... `,
+    );
+
+    try {
+      const risk =
+        await getPackageRisk(
+          dependency.name,
+          dependency.version,
+          depth,
         );
-      break;
 
-    case "bun":
-      dependencies =
-        await parseBunLockfile(
-          lockfile.path,
-        );
-      break;
+      results.push({
+        name:
+          dependency.name,
 
-    case "pnpm":
-      throw new Error(
-        "pnpm lockfile detected, but pnpm parsing is not implemented yet",
+        version:
+          dependency.version,
+
+        risk,
+      });
+
+      console.log(
+        `${printSeverity(
+          risk.severity,
+        )} (${risk.score}/100)`,
+      );
+    } catch (error) {
+      console.log(
+        "? unavailable",
       );
 
-    case "yarn":
-      throw new Error(
-        "yarn lockfile detected, but yarn parsing is not implemented yet",
-      );
-
-    default:
-      throw new Error(
-        `Lockfile type '${lockfile.type}' is not supported yet`,
-      );
+      if (
+        process.env.CHAINTRACE_DEBUG
+      ) {
+        console.error(error);
+      }
+    }
   }
 
-  return {
-    lockfile: {
-      type: lockfile.type,
-      path: lockfile.path,
-    },
+  /*
+   * ========================================================
+   * SORT
+   * ========================================================
+   */
 
-    dependencies,
-  };
+  const sorted =
+    [...results].sort(
+      (a, b) =>
+        severityRank(
+          b.risk.severity,
+        ) -
+          severityRank(
+            a.risk.severity,
+          ) ||
+        b.risk.score -
+          a.risk.score,
+    );
+
+  /*
+   * ========================================================
+   * COUNTS
+   * ========================================================
+   */
+
+  const critical =
+    results.filter(
+      (item) =>
+        item.risk.severity ===
+        "CRITICAL",
+    );
+
+  const high =
+    results.filter(
+      (item) =>
+        item.risk.severity ===
+        "HIGH",
+    );
+
+  const medium =
+    results.filter(
+      (item) =>
+        item.risk.severity ===
+        "MEDIUM",
+    );
+
+  const low =
+    results.filter(
+      (item) =>
+        item.risk.severity ===
+        "LOW",
+    );
+
+  /*
+   * ========================================================
+   * SUMMARY
+   * ========================================================
+   */
+
+  console.log("");
+
+  console.log(
+    "════════════════════════════════════════",
+  );
+
+  console.log(
+    "ChainTrace Security Summary",
+  );
+
+  console.log(
+    "════════════════════════════════════════",
+  );
+
+  console.log("");
+
+  console.log(
+    `Dependencies analyzed: ${results.length}/${result.dependencies.length}`,
+  );
+
+  console.log(
+    `Critical: ${critical.length}`,
+  );
+
+  console.log(
+    `High:     ${high.length}`,
+  );
+
+  console.log(
+    `Medium:   ${medium.length}`,
+  );
+
+  console.log(
+    `Low:      ${low.length}`,
+  );
+
+  /*
+   * ========================================================
+   * TOP RISKS
+   * ========================================================
+   */
+
+  if (sorted.length > 0) {
+    console.log("");
+
+    console.log(
+      "Top risks:",
+    );
+
+    console.log("");
+
+    for (
+      const item of sorted.slice(
+        0,
+        10,
+      )
+    ) {
+      console.log(
+        `  ${printSeverity(
+          item.risk.severity,
+        )} ${item.name}@${item.version} — ${item.risk.score}/100`,
+      );
+
+      if (
+        item.risk.affectedServices > 0
+      ) {
+        console.log(
+          `      affected services: ${item.risk.affectedServices}`,
+        );
+
+        console.log(
+          `      production services: ${item.risk.productionServices}`,
+        );
+      }
+    }
+  }
+
+  /*
+   * ========================================================
+   * DASHBOARD
+   * ========================================================
+   */
+
+  console.log("");
+
+  console.log(
+    "Dashboard:",
+  );
+
+  console.log(
+    "http://localhost:3001",
+  );
+
+  /*
+   * ========================================================
+   * CI EXIT CODE
+   * ========================================================
+   */
+
+  if (
+    critical.length > 0
+  ) {
+    console.log("");
+
+    console.log(
+      "✗ CRITICAL supply-chain risks detected.",
+    );
+
+    process.exitCode = 2;
+  } else if (
+    high.length > 0
+  ) {
+    console.log("");
+
+    console.log(
+      "⚠ HIGH supply-chain risks detected.",
+    );
+
+    process.exitCode = 1;
+  } else {
+    console.log("");
+
+    console.log(
+      "✓ No high-risk dependencies detected.",
+    );
+  }
 }

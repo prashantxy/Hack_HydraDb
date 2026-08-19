@@ -5,7 +5,7 @@ import {
 } from "commander";
 
 import {
-  scanProject,
+  scanCommand,
 } from "./command/scan";
 
 import {
@@ -22,14 +22,22 @@ program
   )
   .version("0.1.0");
 
-// ==========================================================
-// SCAN
-// ==========================================================
+/*
+ * ==========================================================
+ * SCAN
+ * ==========================================================
+ *
+ * chaintrace scan
+ * chaintrace scan --path ./backend
+ * chaintrace scan --path ./backend --depth 5
+ *
+ * ==========================================================
+ */
 
 program
   .command("scan")
   .description(
-    "Scan a project dependency tree",
+    "Scan a project's lockfile and analyze dependencies",
   )
   .option(
     "-p, --path <path>",
@@ -44,59 +52,9 @@ program
   .action(
     async (options) => {
       try {
-        const projectPath =
-          options.path ?? ".";
-
-        const depth =
-          Number(options.depth);
-
-        if (
-          !Number.isInteger(depth) ||
-          depth < 0
-        ) {
-          throw new Error(
-            "depth must be a non-negative integer",
-          );
-        }
-
-        console.log(
-          `Scanning project: ${projectPath}`,
+        await scanCommand(
+          options,
         );
-
-        const result =
-          await scanProject(
-            projectPath,
-          );
-
-        console.log("");
-        console.log(
-          `Lockfile: ${result.lockfile.type}`,
-        );
-
-        console.log(
-          `Path: ${result.lockfile.path}`,
-        );
-
-        console.log(
-          `Dependencies found: ${result.dependencies.length}`,
-        );
-
-        console.log("");
-
-        for (
-          const dependency
-          of result.dependencies
-        ) {
-          console.log(
-            `  ${dependency.name}@${dependency.version}`,
-          );
-        }
-
-        console.log("");
-        console.log(
-          `Depth: ${depth}`,
-        );
-
       } catch (error) {
         console.error(
           "Scan failed:",
@@ -105,14 +63,22 @@ program
             : error,
         );
 
-        process.exit(1);
+        process.exitCode = 1;
       }
     },
   );
 
-// ==========================================================
-// CHECK
-// ==========================================================
+/*
+ * ==========================================================
+ * CHECK
+ * ==========================================================
+ *
+ * chaintrace check axios@1.7.2
+ * chaintrace check react@19.2.8
+ * chaintrace check axios@1.7.2 --depth 10
+ *
+ * ==========================================================
+ */
 
 program
   .command("check")
@@ -134,21 +100,9 @@ program
       options,
     ) => {
       try {
-        const depth =
-          Number(options.depth);
-
-        if (
-          !Number.isInteger(depth) ||
-          depth < 0
-        ) {
-          throw new Error(
-            "depth must be a non-negative integer",
-          );
-        }
-
         await checkCommand(
           packageSpec,
-          depth,
+          Number(options.depth),
         );
       } catch (error) {
         console.error(
@@ -158,9 +112,11 @@ program
             : error,
         );
 
-        process.exit(1);
+        process.exitCode = 1;
       }
     },
   );
 
-await program.parseAsync();
+await program.parseAsync(
+  process.argv,
+);

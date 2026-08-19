@@ -1,24 +1,64 @@
-export interface PackageAnalysis {
-  packageName: string;
+export interface PackageRiskResponse {
   version: string;
-  versionKey: string;
 
-  risk: {
+  score: number;
+
+  severity:
+    | "CRITICAL"
+    | "HIGH"
+    | "MEDIUM"
+    | "LOW";
+
+  affectedServices: number;
+
+  productionServices: number;
+
+  services: Array<{
+    serviceId: number;
+    name: string;
+    environment: string | null;
+    hops: number;
     score: number;
     severity: string;
-    affectedServices: number;
-    productionServices: number;
-  };
+    reasons: string[];
+  }>;
+
+  maxDepth: number;
+}
+
+export interface PackageAnalysis {
+  packageName: string;
+
+  version: string;
+
+  versionKey: string;
+
+  risk: PackageRiskResponse;
 
   blastRadius: {
     affectedServices: number;
     productionServices: number;
-    services: unknown[];
+
+    services: Array<{
+      id: number;
+      name: string;
+      repo: string | null;
+      team: string | null;
+      environment: string | null;
+      hops: number;
+    }>;
   };
 
   attackPaths: {
     affectedServices: number;
-    paths: unknown[];
+
+    paths: Array<{
+      serviceId: number;
+      serviceName: string;
+      environment: string | null;
+      hops: number;
+      path: string[];
+    }>;
   };
 
   maxDepth: number;
@@ -28,17 +68,24 @@ const API_URL =
   process.env.CHAINTRACE_API_URL ??
   "http://localhost:3000";
 
-export async function checkPackage(
+function buildUrl(
   packageName: string,
   version: string,
-  depth = 5,
-): Promise<PackageAnalysis> {
-  const url =
+  endpoint: string,
+  depth: number,
+): string {
+  return (
     `${API_URL}/packages/` +
     `${encodeURIComponent(packageName)}/` +
-    `${encodeURIComponent(version)}` +
-    `/analysis?depth=${depth}`;
+    `${encodeURIComponent(version)}/` +
+    `${endpoint}` +
+    `?depth=${depth}`
+  );
+}
 
+async function request<T>(
+  url: string,
+): Promise<T> {
   const response =
     await fetch(url);
 
@@ -51,19 +98,82 @@ export async function checkPackage(
     );
   }
 
-  return JSON.parse(body);
+  try {
+    return JSON.parse(body) as T;
+  } catch {
+    throw new Error(
+      `Invalid JSON response from ChainTrace API: ${body}`,
+    );
+  }
 }
 
+/*
+ * ==========================================================
+ * RISK
+ * ==========================================================
+ */
+
+export async function getPackageRisk(
+  packageName: string,
+  version: string,
+  depth = 5,
+): Promise<PackageRiskResponse> {
+  const url =
+    buildUrl(
+      packageName,
+      version,
+      "risk",
+      depth,
+    );
+
+  return request<PackageRiskResponse>(
+    url,
+  );
+}
+
+/*
+ * ==========================================================
+ * FULL ANALYSIS
+ * ==========================================================
+ */
+
+export async function checkPackage(
+  packageName: string,
+  version: string,
+  depth = 5,
+): Promise<PackageAnalysis> {
+  const url =
+    buildUrl(
+      packageName,
+      version,
+      "analysis",
+      depth,
+    );
+
+  return request<PackageAnalysis>(
+    url,
+  );
+}
+
+/*
+ * ==========================================================
+ * MULTIPLE PACKAGES
+ * ==========================================================
+ */
+
 export async function checkPackages(
-  dependencies: {
+  dependencies: Array<{
     name: string;
     version: string;
-  }[],
+  }>,
   depth = 5,
 ): Promise<PackageAnalysis[]> {
   const results: PackageAnalysis[] = [];
 
-  for (const dependency of dependencies) {
+  for (
+    const dependency
+    of dependencies
+  ) {
     try {
       const result =
         await checkPackage(
@@ -77,6 +187,12 @@ export async function checkPackages(
       console.error(
         `Failed to analyze ${dependency.name}@${dependency.version}`,
       );
+
+      if (
+        process.env.CHAINTRACE_DEBUG
+      ) {
+        console.error(error);
+      }
     }
   }
 
