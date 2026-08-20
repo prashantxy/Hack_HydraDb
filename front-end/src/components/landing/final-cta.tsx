@@ -19,27 +19,29 @@ export function FinalCta({ progress }: FinalCtaProps) {
       className="final-cta"
       style={{ opacity }}
     >
-      <div style={{ marginBottom: "1rem" }}>
-        <div className="final-cta-headline">
-          Stop counting
-          <br />
-          vulnerable packages.
+      <div className="final-cta-card">
+        <div style={{ marginBottom: "0.5rem" }}>
+          <div className="final-cta-headline">
+            Stop counting
+            <br />
+            vulnerable packages.
+          </div>
         </div>
-      </div>
-      <div style={{ marginBottom: "3rem" }}>
-        <div className="final-cta-sub">
-          Start understanding their impact.
+        <div style={{ marginBottom: "2.5rem" }}>
+          <div className="final-cta-sub">
+            Start understanding their impact.
+          </div>
         </div>
-      </div>
-      <div className="cta-buttons">
-        <a href="#" className="cta-primary">
-          Scan your repository
-          <span style={{ fontSize: "1.1em" }}>→</span>
-        </a>
-        <a href="#" className="cta-secondary">
-          Explore ChainTrace
-          <span style={{ fontSize: "1.1em" }}>→</span>
-        </a>
+        <div className="cta-buttons">
+          <a href="#" className="cta-primary">
+            Scan your repository
+            <span style={{ fontSize: "1.1em" }}>→</span>
+          </a>
+          <a href="#" className="cta-secondary">
+            Explore ChainTrace
+            <span style={{ fontSize: "1.1em" }}>→</span>
+          </a>
+        </div>
       </div>
     </div>
   );

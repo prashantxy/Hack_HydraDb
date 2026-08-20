@@ -196,25 +196,25 @@ export const scrollStages: ScrollStage[] = [
   {
     start: 0.32,
     end: 0.44,
-    lines: ["But packages", "don't exist alone."],
+    lines: ["Graph API maps", "every dependency."],
     variant: "statement",
   },
   {
     start: 0.46,
     end: 0.58,
-    lines: ["Dependencies", "become infrastructure."],
+    lines: ["Attack path analysis", "exposes the risk."],
     variant: "statement",
   },
   {
     start: 0.60,
     end: 0.72,
-    lines: ["Infrastructure", "becomes production."],
+    lines: ["Blast radius", "reaches production."],
     variant: "statement",
   },
   {
     start: 0.76,
     end: 0.88,
-    lines: ["This is", "the blast radius."],
+    lines: ["This is", "the risk score."],
     variant: "statement",
   },
   {
@@ -226,6 +226,7 @@ export const scrollStages: ScrollStage[] = [
       "",
       "3 affected services",
       "3 production services",
+      "0 hops to production",
     ],
     variant: "stats",
   },

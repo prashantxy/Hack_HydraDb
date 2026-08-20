@@ -111,57 +111,6 @@ function BackgroundPlane() {
   );
 }
 
-// ── Moving Cloud Particles (lower horizon) ───────────────────
-
-function MovingClouds() {
-  const pointsRef = useRef<THREE.Points>(null);
-  const count = 100;
-
-  const { positions, speeds } = useMemo(() => {
-    const pos = new Float32Array(count * 3);
-    const sp = new Float32Array(count);
-    for (let i = 0; i < count; i++) {
-      pos[i * 3] = (Math.random() - 0.5) * 24;
-      pos[i * 3 + 1] = -1.0 - Math.random() * 5;
-      pos[i * 3 + 2] = -2 - Math.random() * 6;
-      sp[i] = (Math.random() * 0.3 + 0.05) * (Math.random() > 0.5 ? 1 : -1);
-    }
-    return { positions: pos, speeds: sp };
-  }, []);
-
-  useFrame((state) => {
-    if (!pointsRef.current) return;
-    const posAttr = pointsRef.current.geometry.attributes.position;
-    const arr = posAttr.array as Float32Array;
-    const t = state.clock.elapsedTime;
-
-    for (let i = 0; i < count; i++) {
-      arr[i * 3] += speeds[i] * 0.012;
-      arr[i * 3 + 1] += Math.sin(t * 0.3 + i) * 0.001;
-      if (arr[i * 3] > 12) arr[i * 3] = -12;
-      if (arr[i * 3] < -12) arr[i * 3] = 12;
-    }
-    posAttr.needsUpdate = true;
-  });
-
-  return (
-    <points ref={pointsRef}>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
-      </bufferGeometry>
-      <pointsMaterial
-        color="#8899aa"
-        size={0.35}
-        transparent
-        opacity={0.12}
-        sizeAttenuation
-        blending={THREE.AdditiveBlending}
-        depthWrite={false}
-      />
-    </points>
-  );
-}
-
 // ── Main Component ───────────────────────────────────────────
 
 export function AtmosphereBg() {
@@ -179,7 +128,6 @@ export function AtmosphereBg() {
         <color attach="background" args={["#050508"]} />
         <ambientLight intensity={0.5} />
         <BackgroundPlane />
-        <MovingClouds />
       </Canvas>
     </div>
   );

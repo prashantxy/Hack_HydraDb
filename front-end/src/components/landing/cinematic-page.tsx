@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
-// import { Navigation } from "./navigation";
+import { Navigation } from "./navigation";
 import { TypographyOverlay } from "./typography-overlay";
 import { FinalCta } from "./final-cta";
 import { scrollStore } from "@/lib/scroll-store";
@@ -74,8 +74,8 @@ export function CinematicPage() {
       {/* Layer 10: Typography overlay */}
       <TypographyOverlay progress={progress} />
 
-      {/* Layer 50: Navigation
-      <Navigation progress={progress} /> */}
+      {/* Layer 50: Navigation */}
+      <Navigation progress={progress} />
 
       {/* Scroll spacer */}
       <div className="scroll-spacer" />
