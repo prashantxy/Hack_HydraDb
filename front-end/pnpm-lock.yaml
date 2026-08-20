@@ -17,6 +17,9 @@ importers:
       '@react-three/postprocessing':
         specifier: ^3.0.5
         version: 3.0.5(@react-three/fiber@9.7.0(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(three@0.185.1))(@types/three@0.185.4)(postprocessing@6.39.4(three@0.185.1))(react@19.2.8)(three@0.185.1)
+      landing-effects:
+        specifier: ^0.1.1
+        version: 0.1.1
       lucide-react:
         specifier: ^1.33.0
         version: 1.33.0(react@19.2.8)
@@ -1610,6 +1613,9 @@ packages:
 
   keyv@4.5.4:
     resolution: {integrity: sha512-oxVHkHR/EJf2CNXnWxRLW6mg7JyCCUcG0DtEGmL2ctUo1PNTin1PUil+r/+4r5MpVgC/fn1kjsx7mjSujKqIpw==}
+
+  landing-effects@0.1.1:
+    resolution: {integrity: sha512-racPwT7CZurXXiznWm/N3uilL7svF2xfP65XJONuc5PTBRiACX0JyxeiEMfaia7wqwE7xaKg6e/V40dHUX++dw==}
 
   language-subtag-registry@0.3.23:
     resolution: {integrity: sha512-0K65Lea881pHotoGEa5gDlMxt3pctLi2RplBb7Ezh4rRdLEOtgi7n4EwK9lamnUCkKBqaeKRVebTq6BAxSkpXQ==}
@@ -3972,6 +3978,8 @@ snapshots:
   keyv@4.5.4:
     dependencies:
       json-buffer: 3.0.1
+
+  landing-effects@0.1.1: {}
 
   language-subtag-registry@0.3.23: {}
 

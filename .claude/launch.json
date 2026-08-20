@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "chaintrace-web",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--dir", "front-end", "dev"],
+      "port": 3000
+    }
+  ]
+}

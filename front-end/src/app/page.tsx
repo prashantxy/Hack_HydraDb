@@ -1,15 +1,49 @@
-import { CinematicPage } from "@/components/landing/cinematic-page";
+import "@/styles/chaintrace.css";
+
+import { Hero } from "@/components/site/hero";
+import { Nav } from "@/components/site/nav";
+import { Hatch } from "@/components/site/primitives";
+import {
+  Audience,
+  Closing,
+  Faq,
+  How,
+  Problem,
+  Solution,
+  Stack,
+  Stats,
+} from "@/components/site/sections";
 
 export const metadata = {
-  title: "ChainTrace — Supply Chain Security",
+  title: "ChainTrace — dependency blast radius for npm",
   description:
-    "Don't just find vulnerable packages. Show their production blast radius. Know the blast radius before the attack does.",
+    "ChainTrace turns your lockfile into a dependency graph, then walks it backwards from any compromised version to the services that ship it — with hop counts, attack paths, and a production-weighted risk score.",
 };
 
 export default function Home() {
   return (
-    <main>
-      <CinematicPage />
+    <main className="ct">
+      <Nav />
+
+      <div className="ct-shell">
+        <Hero />
+        <Stats />
+
+        <Problem />
+        <Hatch />
+
+        <Solution />
+        <Hatch />
+
+        <Stack />
+        <Hatch />
+
+        <Audience />
+        <How />
+        <Faq />
+
+        <Closing />
+      </div>
     </main>
   );
 }

@@ -25,12 +25,20 @@
 }
 
 html {
-  scroll-behavior: auto;
-  overflow-x: hidden;
+  scroll-behavior: smooth;
+  /* not overflow-x:hidden — it turns html into a scroll container and
+   * breaks position:sticky for the nav and the stack rail */
+  overflow-x: clip;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }
 
 body {
-  background: var(--color-background);
+  background: #000000;
   color: var(--color-foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;

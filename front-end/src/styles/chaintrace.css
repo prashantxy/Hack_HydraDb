@@ -1,0 +1,1488 @@
+/* ==========================================================
+   ChainTrace — landing page design system
+   Instrument-panel dark: hairline rails, hatch bands, mono
+   data, one signal colour. Every structural device encodes
+   something real: severity, hop depth, traversal order.
+   ========================================================== */
+
+:root {
+  --ink: #000000;
+  --ink-1: #060607;
+  --ink-2: #0b0b0c;
+  --ink-3: #101012;
+
+  --line: rgba(255, 255, 255, 0.08);
+  --line-2: rgba(255, 255, 255, 0.14);
+  --line-3: rgba(255, 255, 255, 0.22);
+
+  --fg: #f7f7f8;
+  --fg-2: rgba(247, 247, 248, 0.62);
+  /* kept above ~4.5:1 on --ink; --fg-4 is for decoration only */
+  --fg-3: rgba(247, 247, 248, 0.56);
+  --fg-4: rgba(247, 247, 248, 0.36);
+
+  /* one signal colour — reserved for blast, risk, and traversal */
+  --sig: #ff5a26;
+  --sig-2: #ff8a3d;
+  --sig-wash: rgba(255, 90, 38, 0.1);
+  --sig-ink: #1a0904;
+
+  /* severity ramp — mirrors risk.ts: CRITICAL / HIGH / MEDIUM / LOW */
+  --crit: #f0453c;
+  --high: #ff8a3d;
+  --med: #f0c04c;
+  --low: #4ade80;
+
+  --hatch: repeating-linear-gradient(
+    -45deg,
+    #16161a 0,
+    #16161a 10px,
+    transparent 10px,
+    transparent 24px
+  );
+
+  --rail: 1440px;
+  --pad: clamp(1.25rem, 4vw, 3.5rem);
+
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* ── reset / base ─────────────────────────────────────────── */
+
+.ct * {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.ct {
+  background: var(--ink);
+  color: var(--fg);
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
+}
+
+.ct ::selection {
+  background: var(--sig);
+  color: var(--sig-ink);
+}
+
+ /* :where() keeps this at zero specificity so component rules
+  * (.ct-btn, .ct-nav-link, .ct-foot a) win without !important */
+.ct :where(a) {
+  color: inherit;
+  text-decoration: none;
+}
+
+.ct :focus-visible {
+  outline: 2px solid var(--sig);
+  outline-offset: 3px;
+}
+
+/* ── layout rails ─────────────────────────────────────────── */
+
+.ct-shell {
+  width: min(100%, var(--rail));
+  margin-inline: auto;
+  border-inline: 1px solid var(--line);
+  position: relative;
+}
+
+.ct-sec {
+  padding-inline: var(--pad);
+  position: relative;
+  border-bottom: 1px solid var(--line);
+}
+
+.ct-sec-pad {
+  padding-block: clamp(4rem, 9vw, 7.5rem);
+}
+
+/* hatch divider — a real caution band, used only between acts */
+.ct-hatch {
+  height: 34px;
+  background-image: var(--hatch);
+  border-bottom: 1px solid var(--line);
+}
+
+/* ── type ─────────────────────────────────────────────────── */
+
+.ct-display {
+  font-family: var(--font-schibsted), var(--font-inter), sans-serif;
+  font-weight: 400;
+  letter-spacing: -0.028em;
+  line-height: 1.02;
+}
+
+.ct-h1 {
+  font-family: var(--font-schibsted), var(--font-inter), sans-serif;
+  font-weight: 400;
+  font-size: clamp(2.5rem, 5.6vw, 4.4rem);
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+.ct-h2 {
+  font-family: var(--font-schibsted), var(--font-inter), sans-serif;
+  font-weight: 400;
+  font-size: clamp(1.9rem, 3.6vw, 3rem);
+  line-height: 1.04;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.ct-h3 {
+  font-family: var(--font-schibsted), var(--font-inter), sans-serif;
+  font-weight: 500;
+  font-size: 1.0625rem;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+.ct-dim {
+  color: var(--fg-3);
+}
+
+.ct-lede {
+  color: var(--fg-2);
+  font-size: clamp(0.95rem, 1.1vw, 1.0625rem);
+  max-width: 46ch;
+}
+
+.ct-mono {
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+/* eyebrow: mono label with a dot-matrix tick, like a channel marker */
+.ct-eyebrow {
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sig);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6em;
+}
+
+.ct-eyebrow::before {
+  content: "";
+  width: 11px;
+  height: 9px;
+  background-image: radial-gradient(
+    circle at center,
+    currentColor 45%,
+    transparent 46%
+  );
+  background-size: 3px 3px;
+  opacity: 0.9;
+}
+
+.ct-eyebrow-mute {
+  color: var(--fg-3);
+}
+
+/* ── buttons ──────────────────────────────────────────────── */
+
+.ct-btn {
+  --btn-bg: var(--fg);
+  --btn-fg: var(--ink);
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.85em;
+  padding: 0.85rem 1.15rem;
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  border: 1px solid transparent;
+  transition:
+    background 0.2s var(--ease),
+    color 0.2s var(--ease),
+    transform 0.2s var(--ease);
+  cursor: pointer;
+}
+
+.ct-btn:hover {
+  --btn-bg: var(--sig);
+  --btn-fg: var(--sig-ink);
+}
+
+.ct-btn:active {
+  transform: translateY(1px);
+}
+
+.ct-btn-ghost {
+  --btn-bg: transparent;
+  --btn-fg: var(--fg);
+  border-color: var(--line-2);
+}
+
+.ct-btn-ghost:hover {
+  --btn-bg: rgba(255, 255, 255, 0.05);
+  --btn-fg: var(--fg);
+  border-color: var(--line-3);
+}
+
+/* the pixel arrow: a 3x3 dot-matrix glyph, not an icon-font chevron */
+.ct-arrow {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  display: block;
+}
+
+.ct-btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+/* ── frames ───────────────────────────────────────────────── */
+
+.ct-frame {
+  position: relative;
+  border: 1px solid var(--line);
+  background: var(--ink-1);
+}
+
+.ct-tick {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  pointer-events: none;
+  color: var(--line-3);
+}
+
+.ct-tick::before,
+.ct-tick::after {
+  content: "";
+  position: absolute;
+  background: currentColor;
+}
+
+.ct-tick::before {
+  inset: 3px 0 3px 0;
+  height: 1px;
+}
+
+.ct-tick::after {
+  inset: 0 3px 0 3px;
+  width: 1px;
+}
+
+.ct-tick-tl {
+  top: -4px;
+  left: -4px;
+}
+.ct-tick-tr {
+  top: -4px;
+  right: -4px;
+}
+.ct-tick-bl {
+  bottom: -4px;
+  left: -4px;
+}
+.ct-tick-br {
+  bottom: -4px;
+  right: -4px;
+}
+
+/* ── nav ──────────────────────────────────────────────────── */
+
+.ct-nav {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  background: rgba(0, 0, 0, 0.84);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--line);
+}
+
+.ct-nav-in {
+  width: min(100%, var(--rail));
+  margin-inline: auto;
+  padding: 0.7rem var(--pad);
+  display: flex;
+  align-items: center;
+  gap: 1.75rem;
+}
+
+.ct-wordmark {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex: none;
+}
+
+.ct-wordmark svg {
+  height: 15px;
+  width: auto;
+  display: block;
+}
+
+.ct-wordmark-slash {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 12px;
+  color: var(--sig);
+}
+
+.ct-nav-links {
+  display: flex;
+  gap: 1.4rem;
+  margin-right: auto;
+}
+
+.ct-nav-link {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+  transition: color 0.18s var(--ease);
+  padding-block: 0.25rem;
+}
+
+.ct-nav-link:hover {
+  color: var(--fg);
+}
+
+@media (max-width: 860px) {
+  .ct-nav-links {
+    display: none;
+  }
+  .ct-nav-in {
+    justify-content: space-between;
+  }
+}
+
+/* ── hero ─────────────────────────────────────────────────── */
+
+.ct-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  border-bottom: 1px solid var(--line);
+}
+
+.ct-hero-copy {
+  padding: clamp(2.5rem, 6vw, 5.5rem) var(--pad) clamp(2.5rem, 5vw, 4.5rem);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1.6rem;
+  min-height: min(78vh, 720px);
+}
+
+.ct-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+  border: 1px solid var(--line);
+  padding: 0.35rem 0.6rem;
+  width: max-content;
+}
+
+.ct-hero-badge b {
+  color: var(--fg);
+  font-weight: 500;
+}
+
+.ct-hero-visual {
+  position: relative;
+  overflow: hidden;
+  min-height: 340px;
+  background:
+    radial-gradient(
+      120% 90% at 62% 40%,
+      rgba(255, 90, 38, 0.09),
+      transparent 62%
+    ),
+    var(--ink);
+}
+
+.ct-hero-cards {
+  position: absolute;
+  inset: auto var(--pad) clamp(1.5rem, 4vw, 3rem) auto;
+  left: clamp(1rem, 3vw, 2.5rem);
+  z-index: 3;
+}
+
+@media (max-width: 960px) {
+  .ct-hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ct-hero-copy {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    min-height: 0;
+  }
+  .ct-hero-visual {
+    min-height: 420px;
+  }
+}
+
+/* ── ascii canvas ─────────────────────────────────────────── */
+
+.ct-ascii {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  opacity: 0;
+  transition: opacity 1.2s var(--ease);
+}
+
+.ct-ascii.is-live {
+  opacity: 1;
+}
+
+/* still fallback: no WebGL, reduced motion, or image error */
+.ct-ascii-still {
+  position: absolute;
+  inset: 0;
+  background: url("/hero-blast.png") center / contain no-repeat;
+  opacity: 0.5;
+  filter: saturate(0) brightness(1.1)
+    drop-shadow(0 0 24px rgba(255, 90, 38, 0.25));
+  mix-blend-mode: screen;
+}
+
+.ct-scanline {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.22) 0 1px,
+    transparent 1px 3px
+  );
+  opacity: 0.5;
+}
+
+/* ── data card (live blast readout) ───────────────────────── */
+
+.ct-card {
+  background: rgba(4, 4, 5, 0.92);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--line-2);
+  width: min(390px, 100%);
+}
+
+.ct-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+
+.ct-card-body {
+  padding: 0.9rem;
+}
+
+.ct-card-foot {
+  border-top: 1px solid var(--line);
+  padding: 0.6rem 0.9rem;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 10.5px;
+  color: var(--fg-3);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ct-dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  background: var(--sig);
+}
+
+.ct-pulse {
+  animation: ct-pulse 1.6s var(--ease) infinite;
+}
+
+@keyframes ct-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+/* service rows in the blast readout */
+.ct-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.42rem 0;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 11.5px;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.07);
+}
+
+.ct-row:last-child {
+  border-bottom: 0;
+}
+
+.ct-row-name {
+  color: var(--fg);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.ct-row-name span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ct-hops {
+  color: var(--fg-3);
+  font-size: 10.5px;
+}
+
+.ct-sev {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  padding: 0.1rem 0.35rem;
+  border: 1px solid currentColor;
+}
+
+.ct-sev-CRITICAL {
+  color: var(--crit);
+}
+.ct-sev-HIGH {
+  color: var(--high);
+}
+.ct-sev-MEDIUM {
+  color: var(--med);
+}
+.ct-sev-LOW {
+  color: var(--low);
+}
+
+/* ── stat strip ───────────────────────────────────────────── */
+
+.ct-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-bottom: 1px solid var(--line);
+}
+
+.ct-stat {
+  padding: clamp(1.5rem, 3vw, 2.4rem) clamp(1rem, 2.5vw, 2rem);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.ct-stat:last-child {
+  border-right: 0;
+}
+
+.ct-stat-num {
+  font-family: var(--font-schibsted), sans-serif;
+  font-size: clamp(1.9rem, 3.4vw, 2.75rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.ct-stat-num em {
+  font-style: normal;
+  color: var(--sig);
+}
+
+.ct-stat-label {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.09em;
+  color: var(--fg-3);
+  text-transform: uppercase;
+  max-width: 22ch;
+}
+
+@media (max-width: 860px) {
+  .ct-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ct-stat:nth-child(2) {
+    border-right: 0;
+  }
+  .ct-stat:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--line);
+  }
+}
+
+/* ── section heads ────────────────────────────────────────────
+ * A statement on the left, a small readout on the right. The
+ * readout is the section's own metadata, not filler.
+ */
+
+.ct-head {
+  padding-top: clamp(3.5rem, 7vw, 6rem);
+  /* the statement needs air before the divider — descenders were
+   * sitting on the hairline */
+  padding-bottom: clamp(2.25rem, 4vw, 3.5rem);
+}
+
+.ct-head-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  gap: clamp(1.5rem, 4vw, 4rem);
+  align-items: end;
+}
+
+.ct-head-grid .ct-h2 {
+  max-width: 30ch;
+}
+
+.ct-head-meta {
+  display: flex;
+  gap: clamp(1.25rem, 3vw, 2.5rem);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 11px;
+  padding-bottom: 0.3rem;
+}
+
+.ct-head-meta dt {
+  color: var(--fg-4);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 10px;
+  margin-bottom: 0.4rem;
+}
+
+.ct-head-meta dd {
+  color: var(--fg-2);
+  border-top: 1px solid var(--line);
+  padding-top: 0.4rem;
+  max-width: 18ch;
+}
+
+@media (max-width: 860px) {
+  .ct-head-grid {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+  .ct-head-meta {
+    display: none;
+  }
+}
+
+/* ── three-up cards ───────────────────────────────────────── */
+
+.ct-tri {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.ct-tri > * {
+  padding: clamp(1.75rem, 3vw, 2.6rem) clamp(1.25rem, 2.4vw, 2rem);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.ct-tri > *:last-child {
+  border-right: 0;
+}
+
+@media (max-width: 860px) {
+  .ct-tri {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* stacked, the tall cells only add scroll — let them size to content */
+  .ct-tri-tall > * {
+    min-height: 0;
+  }
+  .ct-prob-glyph {
+    margin-bottom: 1.5rem;
+  }
+  .ct-tri > * {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .ct-tri > *:last-child {
+    border-bottom: 0;
+  }
+}
+
+.ct-card-note {
+  color: var(--fg-2);
+  font-size: 14px;
+  max-width: 34ch;
+}
+
+/* the cell is tall on purpose: the kicker pins to the top, the
+ * glyph and copy settle at the bottom, and the hairline dividers
+ * get room to read as columns */
+.ct-tri-tall > * {
+  min-height: 424px;
+  gap: 0.75rem;
+}
+
+.ct-kick {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 0.5rem;
+}
+
+.ct-kick span {
+  color: var(--sig);
+}
+
+/* glyph sits under the kicker; the slack falls between it and the
+ * copy, which stays pinned to the bottom of the cell */
+.ct-prob-glyph {
+  width: min(100%, 140px);
+  margin: 1.25rem 0 auto;
+}
+
+/* dot-matrix glyph block that heads each card */
+.ct-matrix {
+  width: 68px;
+  height: 68px;
+  display: block;
+  color: var(--fg-4);
+}
+
+/* ── split section ────────────────────────────────────────── */
+
+.ct-split {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  gap: clamp(2rem, 5vw, 4.5rem);
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .ct-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.ct-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-top: 1.75rem;
+}
+
+.ct-list li {
+  display: flex;
+  gap: 0.7rem;
+  align-items: baseline;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 12px;
+  color: var(--fg-2);
+  border-top: 1px solid var(--line);
+  padding-top: 0.55rem;
+}
+
+.ct-list li::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  flex: none;
+  background: var(--sig);
+  transform: translateY(-1px);
+}
+
+/* the graph model, quoted as Cypher — the shape everything else
+ * on the page is asking questions about */
+.ct-schema {
+  margin-top: 1.4rem;
+  padding: 0.9rem 1rem;
+  border-left: 2px solid var(--sig);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--fg-2);
+  line-height: 1.9;
+  overflow-x: auto;
+}
+
+/* ── terminal ─────────────────────────────────────────────── */
+
+.ct-term {
+  background: var(--ink-1);
+  border: 1px solid var(--line);
+  position: relative;
+}
+
+.ct-term-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.85rem;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+
+.ct-term-body {
+  padding: 1.1rem;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 12.5px;
+  line-height: 1.85;
+  overflow-x: auto;
+  min-height: 260px;
+}
+
+.ct-term-line {
+  white-space: pre;
+  color: var(--fg-2);
+}
+
+.ct-term-line b {
+  color: var(--fg);
+  font-weight: 400;
+}
+
+.ct-term-line i {
+  font-style: normal;
+  color: var(--sig);
+}
+
+.ct-term-cmd {
+  color: var(--fg);
+}
+
+.ct-term-cmd::before {
+  content: "$ ";
+  color: var(--sig);
+}
+
+.ct-caret {
+  display: inline-block;
+  width: 7px;
+  height: 14px;
+  background: var(--sig);
+  vertical-align: -2px;
+  animation: ct-blink 1s steps(1) infinite;
+}
+
+@keyframes ct-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* key: value spec block */
+.ct-spec {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.15rem 1.25rem;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 12px;
+  line-height: 1.9;
+  padding: 1.1rem;
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  margin: 0.9rem;
+  background: rgba(255, 255, 255, 0.012);
+}
+
+.ct-spec dt {
+  color: var(--fg-3);
+}
+
+.ct-spec dd {
+  color: var(--fg);
+}
+
+.ct-spec dd em {
+  font-style: normal;
+  color: var(--sig);
+}
+
+/* ── stack showcase (sticky rail + panels) ────────────────── */
+
+.ct-stack {
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+}
+
+.ct-stack-rail {
+  border-right: 1px solid var(--line);
+  padding: var(--pad) clamp(1rem, 2vw, 1.5rem);
+}
+
+.ct-stack-rail-in {
+  position: sticky;
+  top: 84px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.ct-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid transparent;
+  background: transparent;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    color 0.2s var(--ease),
+    background 0.2s var(--ease),
+    border-color 0.2s var(--ease);
+  width: 100%;
+}
+
+.ct-tab::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  flex: none;
+  background: currentColor;
+  opacity: 0.5;
+}
+
+.ct-tab:hover {
+  color: var(--fg-2);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.ct-tab.is-active {
+  color: var(--fg);
+  background: var(--ink-2);
+  border-color: var(--line);
+}
+
+.ct-tab.is-active::before {
+  background: var(--sig);
+  opacity: 1;
+}
+
+.ct-tab-idx {
+  margin-left: auto;
+  color: var(--fg-4);
+  font-size: 10px;
+}
+
+.ct-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(1.5rem, 3vw, 3rem);
+  padding: clamp(2.5rem, 6vw, 4.5rem) var(--pad);
+  border-bottom: 1px solid var(--line);
+  align-items: center;
+  scroll-margin-top: 70px;
+}
+
+.ct-panel:last-child {
+  border-bottom: 0;
+}
+
+.ct-panel-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.ct-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.3rem;
+}
+
+.ct-chip {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  color: var(--fg-2);
+  border: 1px solid var(--line);
+  background: var(--ink-2);
+  padding: 0.35rem 0.6rem;
+}
+
+/* signature panel: copy on top, diagram across the full width */
+.ct-panel-wide {
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+
+.ct-panel-wide .ct-panel-copy {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: clamp(1.5rem, 3vw, 3rem);
+  align-items: end;
+}
+
+.ct-panel-wide .ct-chips {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 1080px) {
+  .ct-panel,
+  .ct-panel-wide .ct-panel-copy {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 860px) {
+  .ct-stack {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ct-stack-rail {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    padding-block: 1rem;
+  }
+  .ct-stack-rail-in {
+    position: static;
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+  }
+  .ct-tab {
+    width: auto;
+    white-space: nowrap;
+  }
+  .ct-tab-idx {
+    display: none;
+  }
+  /* the strip is the label on mobile */
+  .ct-stack-rail-in > .ct-eyebrow {
+    display: none;
+  }
+}
+
+.ct-graph {
+  background: var(--ink-1);
+}
+
+.ct-graph-key {
+  color: var(--sig);
+}
+
+.ct-graph .ctbg {
+  padding: 0.5rem clamp(0.5rem, 1.5vw, 1.25rem) 0;
+}
+
+.ct-graph-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.75rem;
+  align-items: center;
+  border-top: 1px solid var(--line);
+  padding: 0.75rem clamp(0.85rem, 2vw, 1.25rem);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 11px;
+  color: var(--fg-3);
+}
+
+.ct-graph-foot > span {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ct-graph-foot > span:not(:first-child)::before {
+  content: "";
+  width: 3px;
+  height: 3px;
+  background: var(--fg-4);
+}
+
+.ct-graph-hot {
+  color: var(--fg);
+}
+
+.ct-graph svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* the blast diagram keeps a legible minimum and scrolls inside
+ * its own box rather than shrinking its labels to nothing */
+.ctbg {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+.ctbg svg {
+  min-width: 580px;
+}
+
+/* ── audience ─────────────────────────────────────────────── */
+
+.ct-tri-aud > * {
+  min-height: 236px;
+  padding-block: clamp(2rem, 3.4vw, 2.9rem);
+  gap: 1rem;
+}
+
+.ct-tri-aud > * .ct-card-note {
+  margin-top: auto;
+}
+
+.ct-aud-tag {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  color: var(--fg-4);
+}
+
+.ct-aud-tag::before {
+  content: "// ";
+  color: var(--sig);
+}
+
+/* ── steps: a timeline ────────────────────────────────────────
+ * No column dividers here — the rail across the top is the
+ * structure, and it reads as one sequence rather than three cards.
+ */
+
+.ct-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.ct-step {
+  padding: clamp(2rem, 3.4vw, 2.9rem) clamp(1.25rem, 2.4vw, 2rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  position: relative;
+}
+
+/* the rail: a hairline with a node, clipped at the first and last
+ * columns so the line starts and stops on a node */
+.ct-step-rail {
+  position: relative;
+  height: 1px;
+  background: var(--line-2);
+  margin-bottom: 1.75rem;
+  /* bleed into the gutters so the line is continuous across columns */
+  margin-inline: calc(-1 * clamp(1.25rem, 2.4vw, 2rem));
+}
+
+.ct-step-rail[data-first="true"] {
+  margin-left: 0;
+}
+
+.ct-step-rail[data-last="true"] {
+  margin-right: 0;
+  background: linear-gradient(to right, var(--line-2) 0 60%, transparent 100%);
+}
+
+.ct-step-node {
+  position: absolute;
+  top: -3.5px;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  background: var(--sig);
+}
+
+.ct-step-rail[data-first="true"] .ct-step-node {
+  left: 0;
+}
+
+.ct-step-n {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 10.5px;
+  color: var(--sig);
+  letter-spacing: 0.14em;
+}
+
+.ct-step-cmd {
+  color: var(--sig);
+  margin-top: auto;
+  padding-top: 1.25rem;
+}
+
+@media (max-width: 860px) {
+  .ct-steps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ct-step {
+    border-bottom: 1px solid var(--line);
+  }
+  .ct-step:last-child {
+    border-bottom: 0;
+  }
+  .ct-step-rail {
+    margin-inline: 0;
+    background: var(--line-2);
+  }
+}
+
+/* ── faq ──────────────────────────────────────────────────── */
+
+.ct-faq {
+  border-top: 1px solid var(--line);
+}
+
+.ct-faq details {
+  border-bottom: 1px solid var(--line);
+}
+
+.ct-faq summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 1.15rem 0;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-family: var(--font-schibsted), sans-serif;
+  font-size: 1.0625rem;
+  letter-spacing: -0.012em;
+  transition: color 0.18s var(--ease);
+}
+
+.ct-faq summary::-webkit-details-marker {
+  display: none;
+}
+
+.ct-faq summary:hover {
+  color: var(--sig);
+}
+
+.ct-faq summary::after {
+  content: "+";
+  margin-left: auto;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 14px;
+  color: var(--fg-3);
+}
+
+.ct-faq details[open] summary::after {
+  content: "−";
+  color: var(--sig);
+}
+
+.ct-faq-a {
+  color: var(--fg-2);
+  font-size: 14px;
+  max-width: 62ch;
+  padding-bottom: 1.3rem;
+}
+
+/* ── closing ──────────────────────────────────────────────────
+ * The dot field runs full bleed; the card sits on the quiet middle
+ * the field leaves for it.
+ */
+
+.ct-closing {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-bottom: 1px solid var(--line);
+  padding: clamp(3.5rem, 8vw, 6.5rem) var(--pad);
+  display: grid;
+  place-items: center;
+  min-height: min(74vh, 620px);
+}
+
+.ct-waves {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  display: block;
+}
+
+.ct-closing-card {
+  position: relative;
+  width: min(520px, 100%);
+  background: rgba(0, 0, 0, 0.74);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--line-2);
+  padding: clamp(1.75rem, 3.5vw, 2.5rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ct-closing-card .ct-h2 {
+  font-size: clamp(1.6rem, 2.6vw, 2.15rem);
+  margin-top: 1.1rem;
+}
+
+.ct-closing-card .ct-h2 + .ct-h2 {
+  margin-top: 0;
+  margin-bottom: 1.9rem;
+}
+
+.ct-closing-card .ct-mono {
+  margin-top: 1.1rem;
+}
+
+/* ── footer ───────────────────────────────────────────────── */
+
+.ct-foot {
+  display: grid;
+  grid-template-columns: 1.5fr repeat(3, minmax(0, 1fr));
+  gap: 2rem;
+  padding: clamp(2rem, 4vw, 3rem) var(--pad);
+  border-bottom: 1px solid var(--line);
+}
+
+.ct-foot svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.ct-foot h4 {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--fg-4);
+  margin-bottom: 0.9rem;
+}
+
+.ct-foot ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.ct-foot a,
+.ct-foot li {
+  font-size: 13px;
+  color: var(--fg-2);
+}
+
+.ct-foot a:hover {
+  color: var(--sig);
+}
+
+.ct-foot-note {
+  color: var(--fg-3);
+  font-size: 13px;
+  max-width: 30ch;
+  margin-top: 0.9rem;
+}
+
+.ct-foot-bar {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.9rem var(--pad);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 10.5px;
+  color: var(--fg-4);
+  letter-spacing: 0.08em;
+}
+
+@media (max-width: 860px) {
+  .ct-foot {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ── dot-matrix wordmark ─────────────────────────────────────
+ * CHAINTRACE punched into a dot grid, sized to the container. The
+ * page opens on a graph read as characters and closes on its name
+ * read the same way.
+ */
+
+.ct-bigmark {
+  border-top: 1px solid var(--line);
+  padding: clamp(1.25rem, 3vw, 2.25rem) var(--pad) 0;
+  overflow: hidden;
+}
+
+.ct-bigmark canvas {
+  display: block;
+  width: 100%;
+  height: clamp(58px, 13.5vw, 178px);
+  margin-bottom: -1.6vw;
+}
+
+.ct-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ── reveal on scroll ─────────────────────────────────────── */
+
+.ct-reveal > * {
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 0.7s var(--ease),
+    transform 0.7s var(--ease);
+  transition-delay: calc(var(--i, 0) * 70ms);
+}
+
+.ct-reveal.is-in > * {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ct * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .ct-reveal > * {
+    opacity: 1;
+    transform: none;
+  }
+}
