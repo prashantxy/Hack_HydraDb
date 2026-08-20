@@ -23,10 +23,10 @@ export function Hero() {
         </h1>
 
         <p className="ct-lede" style={{ ["--i" as string]: 2 }}>
-          ChainTrace turns your lockfile into a dependency graph, then walks it
-          backwards from any compromised version to the services that actually
-          ship it — with hop counts, the attack path, and a risk score that
-          weighs production first.
+          ChainTrace turns your npm and Python lockfiles into one dependency
+          graph, then walks it backwards from any compromised version to the
+          services that actually ship it — with hop counts, the attack path,
+          and a risk score that weighs production first.
         </p>
 
         <div className="ct-btn-row" style={{ ["--i" as string]: 3 }}>
@@ -34,7 +34,7 @@ export function Hero() {
             Scan a repo
             <PixelArrow />
           </a>
-          <a href="#stack" className="ct-btn ct-btn-ghost">
+          <a href="/console/graph" className="ct-btn ct-btn-ghost">
             See the traversal
             <PixelArrow />
           </a>
@@ -44,7 +44,7 @@ export function Hero() {
           className="ct-mono"
           style={{ ["--i" as string]: 4, color: "var(--fg-4)" }}
         >
-          npm · pnpm · yarn · bun — lockfile detected, ranges resolved
+          npm · bun · pip · poetry · pipenv — lockfile parsed, ranges resolved
         </p>
       </Reveal>
 

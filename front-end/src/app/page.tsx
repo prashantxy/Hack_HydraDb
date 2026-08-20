@@ -15,9 +15,9 @@ import {
 } from "@/components/site/sections";
 
 export const metadata = {
-  title: "ChainTrace — dependency blast radius for npm",
+  title: "ChainTrace — dependency blast radius for npm and PyPI",
   description:
-    "ChainTrace turns your lockfile into a dependency graph, then walks it backwards from any compromised version to the services that ship it — with hop counts, attack paths, and a production-weighted risk score.",
+    "ChainTrace turns your npm and Python lockfiles into one dependency graph, then walks it backwards from any compromised version to the services that ship it — with hop counts, attack paths, and a production-weighted risk score.",
 };
 
 export default function Home() {

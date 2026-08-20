@@ -23,12 +23,12 @@ export function Stats() {
   return (
     <div className="ct-stats">
       <Stat n={5} label="Hops per traversal — depth is capped, not unbounded" />
-      <Stat n={4} label="Lockfile formats read: npm, pnpm, yarn, bun" />
+      <Stat n={5} label="Lockfile parsers: npm, bun, pip, poetry, pipenv" />
       <Stat
         n={100}
         label="Risk scale per service — production weighted heaviest"
       />
-      <Stat n={1} label="Pinned graph snapshot per query, on HydraDB" />
+      <Stat n={2} label="Ecosystems in one graph — npm and PyPI" />
     </div>
   );
 }
@@ -215,12 +215,14 @@ export function Solution() {
             style={{ ["--i" as string]: 3 }}
           >{`(:Package)-[:HAS_VERSION]->(:Version)
 (:Version)-[:DEPENDS_ON]->(:Version)
-(:Service)-[:DEPENDS_ON_VERSION]->(:Version)`}</pre>
+(:Service)-[:DEPENDS_ON_VERSION]->(:Version)
+(:Maintainer)-[:MAINTAINS]->(:Package)`}</pre>
 
           <ul className="ct-list" style={{ ["--i" as string]: 4 }}>
             <li>Blast radius: which services a bad version reaches, and in how many hops</li>
             <li>Attack path: the exact chain from service to compromised version</li>
             <li>Risk: scored per service, production weighted heaviest</li>
+            <li>Co-maintainers: what else the same publishing account can reach</li>
             <li>One pinned snapshot per query — the answer never straddles a write</li>
           </ul>
         </Reveal>
@@ -398,14 +400,14 @@ const PANELS: Panel[] = [
         <span className="ct-dim">It finds the lockfile.</span>
       </>
     ),
-    body: "The CLI detects bun.lock, package-lock.json, pnpm-lock.yaml or yarn.lock, resolves every semver range to the version npm would actually install, and ingests the result. Package coordinates leave your machine; source files never do.",
-    chips: ["4 lockfile formats", "Range resolution", "Local parse"],
+    body: "The CLI parses package-lock.json, bun.lock, requirements.txt, poetry.lock and Pipfile.lock, resolves every range to the version the installer would actually pick, and ingests the result. pnpm and yarn lockfiles are detected but not parsed yet. Package coordinates leave your machine; source files never do.",
+    chips: ["npm + PyPI", "Range resolution", "Local parse"],
     visual: (
       <Terminal
         title="chaintrace — scan"
         lines={[
           { kind: "cmd", content: "chaintrace scan --path ./services/checkout" },
-          { kind: "out", content: <>{"  "}detected  pnpm-lock.yaml</>, wait: 400 },
+          { kind: "out", content: <>{"  "}detected  package-lock.json</>, wait: 400 },
           {
             kind: "out",
             content: (
@@ -458,8 +460,8 @@ const PANELS: Panel[] = [
         <span className="ct-dim">Not a flattened list.</span>
       </>
     ),
-    body: "Packages, versions and DEPENDS_ON edges live in HydraDB with the dependency type and the range that pulled them in. Traversal runs level by level, so you can ask for depth 2 and get depth 2 — not a query that walks your whole graph.",
-    chips: ["OpenCypher", "runtime · peer · optional", "Depth 1–5"],
+    body: "Packages, versions and DEPENDS_ON edges live in HydraDB with the dependency type and the range that pulled them in, npm and PyPI in the same graph. Traversal runs level by level, so you can ask for depth 2 and get depth 2 — not a query that walks your whole graph.",
+    chips: ["OpenCypher", "npm: and pypi: keys", "Depth 1–5"],
     visual: (
       <SpecCard
         title="GET /packages/axios/graph?depth=2"
@@ -733,7 +735,7 @@ const FAQ: [string, ReactNode][] = [
   ],
   [
     "Which lockfiles does it read?",
-    "package-lock.json, pnpm-lock.yaml, yarn.lock and bun.lock (including bun.lockb). The CLI detects the format from the project directory, so there is nothing to configure.",
+    "For npm: package-lock.json, npm-shrinkwrap.json and bun.lock (including the binary bun.lockb). For Python: requirements.txt, poetry.lock and Pipfile.lock. pnpm-lock.yaml and yarn.lock are detected but not parsed yet. The CLI picks the format out of the project directory, so there is nothing to configure.",
   ],
   [
     "How is the risk score calculated?",
@@ -750,6 +752,10 @@ const FAQ: [string, ReactNode][] = [
   [
     "Does my source code leave my machine?",
     "No. The CLI parses the lockfile locally and sends package coordinates — name, version, range — to the ingest API. It does not read or upload source files.",
+  ],
+  [
+    "Does it cover Python as well as npm?",
+    "Yes. PyPI packages are ingested from pypi.org, PEP 508 dependency strings are normalised into the same shape as npm's, and everything lands in one graph — keys are prefixed npm: or pypi:. Blast radius, attack paths and risk work the same either way, so a service that ships both is scored across both.",
   ],
 ];
 
@@ -808,8 +814,8 @@ export function Closing() {
               Scan a repo
               <PixelArrow />
             </a>
-            <a href="#stack" className="ct-btn ct-btn-ghost">
-              Read the API
+            <a href="/console" className="ct-btn ct-btn-ghost">
+              Open the console
               <PixelArrow />
             </a>
           </div>
@@ -834,8 +840,8 @@ export function Closing() {
               <Wordmark />
             </div>
             <p className="ct-foot-note">
-              Dependency blast radius for npm, on a graph that lives in object
-              storage.
+              Dependency blast radius for npm and PyPI, on a graph that lives
+              in object storage.
             </p>
           </div>
 
@@ -883,7 +889,7 @@ export function Closing() {
               </li>
               <li>OpenCypher</li>
               <li>Bun · TypeScript</li>
-              <li>npm registry</li>
+              <li>npm + PyPI registries</li>
             </ul>
           </div>
         </div>

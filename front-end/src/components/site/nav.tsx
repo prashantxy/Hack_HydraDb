@@ -7,6 +7,7 @@ const LINKS = [
   { href: "#blast", label: "Blast radius" },
   { href: "#how", label: "How it works" },
   { href: "#faq", label: "FAQ" },
+  { href: "/console", label: "Console" },
 ];
 
 export function Nav() {
