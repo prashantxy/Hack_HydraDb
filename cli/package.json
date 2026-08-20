@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Software supply-chain security CLI",
   "bin": {
-    "chaintrace": "./dist/index.js"
+    "chaintrace": "./dist/chaintrace"
   },
   "scripts": {
     "dev": "bun run src/index.ts",
