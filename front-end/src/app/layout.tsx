@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Inter, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({
@@ -7,15 +7,21 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-space-grotesk",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
 const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-mono",
+  variable: "--font-jetbrains-mono",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "ChainTrace — Supply-Chain Security",
+  title: "ChainTrace — Supply Chain Security",
   description:
-    "ChainTrace maps vulnerable dependencies to the production services they can actually affect. Know the blast radius before the attack does.",
+    "Don't just find vulnerable packages. Show their production blast radius. Know the blast radius before the attack does.",
 };
 
 export default function RootLayout({
@@ -26,7 +32,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${jetbrainsMono.variable} dark`}
+      className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}
     >
       <body>{children}</body>
     </html>

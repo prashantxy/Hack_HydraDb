@@ -1,235 +1,232 @@
+export type NodeType = "package" | "service" | "environment";
 export type Severity = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
 
-export type GraphNodeType = "package" | "service";
-
-export interface GraphNode {
+export interface GraphNodeData {
   id: string;
-  type: GraphNodeType;
+  type: NodeType;
   label: string;
   severity?: Severity;
   environment?: string;
-  x: number;
-  y: number;
-  z: number;
+  /** Scroll progress when this node starts appearing */
+  appearAt: number;
+  /** Position in 3D space at full visibility */
+  restPosition: [number, number, number];
+  /** Node visual radius */
+  radius: number;
+  /** Whether this node is on the critical blast-radius path */
+  onCriticalPath: boolean;
 }
 
-export interface GraphEdge {
+export interface GraphEdgeData {
   source: string;
   target: string;
-  hops?: number;
+  /** Whether this edge is on the critical blast-radius path */
+  onCriticalPath: boolean;
+  /** Scroll progress when this edge becomes visible */
+  appearAt: number;
 }
 
-export interface ServiceRisk {
-  serviceId: number;
-  name: string;
-  environment: string | null;
-  hops: number;
-  score: number;
-  severity: Severity;
-  reasons: string[];
-}
+// ── Demo graph data ──────────────────────────────────────────────
 
-export interface PackageRisk {
-  version: string;
-  score: number;
-  severity: Severity;
-  affectedServices: number;
-  productionServices: number;
-  services: ServiceRisk[];
-}
-
-export interface AttackPath {
-  serviceId: number;
-  serviceName: string;
-  environment: string | null;
-  hops: number;
-  path: string[];
-}
-
-// ─── Mock Graph Data ───────────────────────────────────────────
-
-export const mockGraphNodes: GraphNode[] = [
+export const graphNodes: GraphNodeData[] = [
+  // Root package
   {
-    id: "npm:axios@1.7.2",
+    id: "axios",
     type: "package",
     label: "axios@1.7.2",
     severity: "CRITICAL",
-    x: 0,
-    y: 2.5,
-    z: 0,
+    appearAt: 0.0,
+    restPosition: [0, 3, 0],
+    radius: 0.35,
+    onCriticalPath: true,
   },
+  // Dependencies
   {
-    id: "npm:form-data@4.0.6",
+    id: "form-data",
     type: "package",
     label: "form-data@4.0.6",
-    severity: "CRITICAL",
-    x: -2.5,
-    y: 1,
-    z: 0.5,
+    severity: "MEDIUM",
+    appearAt: 0.10,
+    restPosition: [3, 1.5, 1],
+    radius: 0.25,
+    onCriticalPath: true,
   },
   {
-    id: "npm:follow-redirects@1.15.6",
+    id: "follow-redirects",
     type: "package",
-    label: "follow-redirects@1.15.6",
+    label: "follow-redirects@1.16.0",
     severity: "HIGH",
-    x: 2.5,
-    y: 1,
-    z: -0.5,
+    appearAt: 0.10,
+    restPosition: [-3, 1.5, -1],
+    radius: 0.25,
+    onCriticalPath: true,
   },
   {
-    id: "npm:mime-types@2.1.35",
+    id: "mime-types",
     type: "package",
     label: "mime-types@2.1.35",
-    severity: "HIGH",
-    x: -1.2,
-    y: -0.5,
-    z: 1,
+    severity: "LOW",
+    appearAt: 0.28,
+    restPosition: [5, 3.5, 1.5],
+    radius: 0.2,
+    onCriticalPath: false,
   },
   {
-    id: "npm:proxy-from-env@1.1.0",
+    id: "qs",
+    type: "package",
+    label: "qs@6.13.0",
+    appearAt: 0.28,
+    restPosition: [-5, 3, -1.5],
+    radius: 0.2,
+    onCriticalPath: false,
+  },
+  {
+    id: "proxy-from-env",
     type: "package",
     label: "proxy-from-env@1.1.0",
-    severity: "LOW",
-    x: 1.2,
-    y: -0.5,
-    z: -1,
+    appearAt: 0.28,
+    restPosition: [0, 5, 0.5],
+    radius: 0.2,
+    onCriticalPath: false,
   },
+  // Services
   {
     id: "checkout-service",
     type: "service",
     label: "checkout-service",
-    environment: "production",
-    severity: "CRITICAL",
-    x: -3.5,
-    y: -2.5,
-    z: 0,
+    appearAt: 0.42,
+    restPosition: [3, -1.5, 0.5],
+    radius: 0.4,
+    onCriticalPath: true,
   },
   {
     id: "payment-api",
     type: "service",
     label: "payment-api",
-    environment: "production",
-    severity: "CRITICAL",
-    x: 0,
-    y: -2.5,
-    z: 0,
+    appearAt: 0.42,
+    restPosition: [-3, -1.5, -0.5],
+    radius: 0.4,
+    onCriticalPath: true,
   },
   {
     id: "analytics-api",
     type: "service",
     label: "analytics-api",
-    environment: "production",
-    severity: "MEDIUM",
-    x: 3.5,
-    y: -2.5,
-    z: 0,
+    appearAt: 0.42,
+    restPosition: [0, -3, 0],
+    radius: 0.35,
+    onCriticalPath: false,
+  },
+  // Production
+  {
+    id: "production",
+    type: "environment",
+    label: "production",
+    appearAt: 0.62,
+    restPosition: [0, -5.5, 0],
+    radius: 0.5,
+    onCriticalPath: true,
   },
 ];
 
-export const mockGraphEdges: GraphEdge[] = [
-  { source: "npm:axios@1.7.2", target: "npm:form-data@4.0.6", hops: 0 },
-  { source: "npm:axios@1.7.2", target: "npm:follow-redirects@1.15.6", hops: 0 },
-  { source: "npm:axios@1.7.2", target: "npm:proxy-from-env@1.1.0", hops: 0 },
-  { source: "npm:form-data@4.0.6", target: "npm:mime-types@2.1.35", hops: 1 },
-  { source: "npm:follow-redirects@1.15.6", target: "npm:mime-types@2.1.35", hops: 1 },
-  { source: "checkout-service", target: "npm:form-data@4.0.6", hops: 0 },
-  { source: "payment-api", target: "npm:axios@1.7.2", hops: 0 },
-  { source: "analytics-api", target: "npm:mime-types@2.1.35", hops: 0 },
+export const graphEdges: GraphEdgeData[] = [
+  // axios → dependencies
+  { source: "axios", target: "form-data", onCriticalPath: true, appearAt: 0.10 },
+  { source: "axios", target: "follow-redirects", onCriticalPath: true, appearAt: 0.10 },
+  { source: "axios", target: "proxy-from-env", onCriticalPath: false, appearAt: 0.28 },
+  // form-data → mime-types
+  { source: "form-data", target: "mime-types", onCriticalPath: false, appearAt: 0.28 },
+  // follow-redirects → qs
+  { source: "follow-redirects", target: "qs", onCriticalPath: false, appearAt: 0.28 },
+  // dependencies → services
+  { source: "form-data", target: "checkout-service", onCriticalPath: true, appearAt: 0.42 },
+  { source: "follow-redirects", target: "payment-api", onCriticalPath: true, appearAt: 0.42 },
+  { source: "mime-types", target: "analytics-api", onCriticalPath: false, appearAt: 0.42 },
+  // services → production
+  { source: "checkout-service", target: "production", onCriticalPath: true, appearAt: 0.62 },
+  { source: "payment-api", target: "production", onCriticalPath: true, appearAt: 0.62 },
+  { source: "analytics-api", target: "production", onCriticalPath: false, appearAt: 0.62 },
 ];
 
-// ─── Mock Risk Data ────────────────────────────────────────────
+// ── Camera keyframes ─────────────────────────────────────────────
 
-export const mockAxiosRisk: PackageRisk = {
-  version: "npm:axios@1.7.2",
-  score: 90,
-  severity: "CRITICAL",
-  affectedServices: 3,
-  productionServices: 3,
-  services: [
-    {
-      serviceId: 1,
-      name: "payment-api",
-      environment: "production",
-      hops: 0,
-      score: 90,
-      severity: "CRITICAL",
-      reasons: ["Affected production service", "Direct dependency"],
-    },
-    {
-      serviceId: 2,
-      name: "checkout-service",
-      environment: "production",
-      hops: 1,
-      score: 80,
-      severity: "CRITICAL",
-      reasons: ["Affected production service", "One-hop transitive dependency"],
-    },
-    {
-      serviceId: 3,
-      name: "analytics-api",
-      environment: "production",
-      hops: 2,
-      score: 70,
-      severity: "HIGH",
-      reasons: ["Affected production service", "2-hop transitive dependency"],
-    },
-  ],
-};
-
-export const mockAttackPaths: AttackPath[] = [
-  {
-    serviceId: 1,
-    serviceName: "payment-api",
-    environment: "production",
-    hops: 0,
-    path: ["npm:payment-service@3.2.1", "npm:axios@1.7.2"],
-  },
-  {
-    serviceId: 2,
-    serviceName: "checkout-service",
-    environment: "production",
-    hops: 1,
-    path: [
-      "npm:checkout-core@2.1.0",
-      "npm:form-data@4.0.6",
-      "npm:axios@1.7.2",
-    ],
-  },
-  {
-    serviceId: 3,
-    serviceName: "analytics-api",
-    environment: "production",
-    hops: 2,
-    path: [
-      "npm:analytics-sdk@1.0.3",
-      "npm:mime-types@2.1.35",
-      "npm:form-data@4.0.6",
-      "npm:axios@1.7.2",
-    ],
-  },
-];
-
-// ─── API Boundary ──────────────────────────────────────────────
-// This function is designed so the mock data can later be replaced
-// with real API calls to GET /packages/:package/:version/analysis
-
-export async function fetchPackageAnalysis(
-  packageName: string,
-  version: string,
-): Promise<{
-  risk: PackageRisk;
-  attackPaths: AttackPath[];
-  graphNodes: GraphNode[];
-  graphEdges: GraphEdge[];
-}> {
-  // TODO: Replace with real API call
-  // const res = await fetch(`${API_URL}/packages/${packageName}/${version}/analysis`);
-  // return res.json();
-
-  return {
-    risk: mockAxiosRisk,
-    attackPaths: mockAttackPaths,
-    graphNodes: mockGraphNodes,
-    graphEdges: mockGraphEdges,
-  };
+export interface CameraKeyframe {
+  scroll: number;
+  position: [number, number, number];
+  lookAt: [number, number, number];
 }
+
+export const cameraKeyframes: CameraKeyframe[] = [
+  { scroll: 0.0, position: [0, 0.5, 12], lookAt: [0, 1, 0] },
+  { scroll: 0.15, position: [0, 0, 16], lookAt: [0, 1, 0] },
+  { scroll: 0.35, position: [0, 0.5, 22], lookAt: [0, 0, 0] },
+  { scroll: 0.55, position: [1, 1, 28], lookAt: [0, -1, 0] },
+  { scroll: 0.75, position: [0, 1.5, 34], lookAt: [0, -1, 0] },
+  { scroll: 1.0, position: [0, 2, 40], lookAt: [0, -1, 0] },
+];
+
+// ── Scroll stages ────────────────────────────────────────────────
+
+export interface ScrollStage {
+  start: number;
+  end: number;
+  lines: string[];
+  variant: "hero" | "statement" | "stats";
+}
+
+export const scrollStages: ScrollStage[] = [
+  {
+    start: 0.0,
+    end: 0.06,
+    lines: ["CHAINTRACE"],
+    variant: "hero",
+  },
+  {
+    start: 0.04,
+    end: 0.14,
+    lines: ["Know the blast radius", "before the attack does."],
+    variant: "statement",
+  },
+  {
+    start: 0.16,
+    end: 0.30,
+    lines: ["It starts", "with one package."],
+    variant: "statement",
+  },
+  {
+    start: 0.32,
+    end: 0.44,
+    lines: ["But packages", "don't exist alone."],
+    variant: "statement",
+  },
+  {
+    start: 0.46,
+    end: 0.58,
+    lines: ["Dependencies", "become infrastructure."],
+    variant: "statement",
+  },
+  {
+    start: 0.60,
+    end: 0.72,
+    lines: ["Infrastructure", "becomes production."],
+    variant: "statement",
+  },
+  {
+    start: 0.76,
+    end: 0.88,
+    lines: ["This is", "the blast radius."],
+    variant: "statement",
+  },
+  {
+    start: 0.82,
+    end: 0.95,
+    lines: [
+      "CRITICAL",
+      "90 / 100",
+      "",
+      "3 affected services",
+      "3 production services",
+    ],
+    variant: "stats",
+  },
+];
