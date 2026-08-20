@@ -27,7 +27,7 @@
  */
 
 export const API_BASE = (
-  process.env.NEXT_PUBLIC_CHAINTRACE_API ?? "http://localhost:4000"
+  process.env.NEXT_PUBLIC_CHAINTRACE_API ?? "http://localhost:3000"
 ).replace(/\/$/, "");
 
 /* ── shared shapes ───────────────────────────────────────────── */
@@ -225,7 +225,9 @@ export interface IngestResponse {
   stats: Record<string, number>;
 }
 
-/* ── transport ───────────────────────────────────────────────── */
+/* ── transport (axios) ──────────────────────────────────────── */
+
+import axios from "axios";
 
 export class ApiError extends Error {
   status: number;
@@ -236,29 +238,28 @@ export class ApiError extends Error {
   }
 }
 
-async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
-  let res: Response;
+const client = axios.create({
+  baseURL: API_BASE,
+  timeout: 30000,
+  headers: { Accept: "application/json" },
+});
 
+async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
   try {
-    res = await fetch(`${API_BASE}${path}`, {
-      signal,
-      headers: { Accept: "application/json" },
-    });
+    const res = await client.get<T>(path, { signal });
+    return res.data;
   } catch (err) {
-    if ((err as Error)?.name === "AbortError") throw err;
-    // network-level: unreachable, DNS, CORS, mixed content
+    if (axios.isCancel(err)) throw err;
+    if (axios.isAxiosError(err)) {
+      const status = err.response?.status ?? 0;
+      const message =
+        (err.response?.data as { error?: string })?.error ??
+        err.message ??
+        `Request failed`;
+      throw new ApiError(message, status);
+    }
     throw new ApiError(`Cannot reach the API at ${API_BASE}`, 0);
   }
-
-  const body = await res.json().catch(() => null);
-
-  if (!res.ok) {
-    const message =
-      (body as { error?: string })?.error ?? `Request failed (${res.status})`;
-    throw new ApiError(message, res.status);
-  }
-
-  return body as T;
 }
 
 async function post<T>(
@@ -266,33 +267,21 @@ async function post<T>(
   body: unknown,
   signal?: AbortSignal,
 ): Promise<T> {
-  let res: Response;
-
   try {
-    res = await fetch(`${API_BASE}${path}`, {
-      method: "POST",
-      signal,
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
+    const res = await client.post<T>(path, body, { signal });
+    return res.data;
   } catch (err) {
-    if ((err as Error)?.name === "AbortError") throw err;
+    if (axios.isCancel(err)) throw err;
+    if (axios.isAxiosError(err)) {
+      const status = err.response?.status ?? 0;
+      const message =
+        (err.response?.data as { error?: string })?.error ??
+        err.message ??
+        `Request failed`;
+      throw new ApiError(message, status);
+    }
     throw new ApiError(`Cannot reach the API at ${API_BASE}`, 0);
   }
-
-  const payload = await res.json().catch(() => null);
-
-  if (!res.ok) {
-    throw new ApiError(
-      (payload as { error?: string })?.error ?? `Request failed (${res.status})`,
-      res.status,
-    );
-  }
-
-  return payload as T;
 }
 
 /* version keys look like npm:axios@1.7.2 or pypi:requests@2.32.3, and
