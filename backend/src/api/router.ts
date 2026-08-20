@@ -32,12 +32,25 @@ import {
 
 import {
   attackPathRoute,
-} from "./routes/attack-path";
-
-import {
-  registerServiceRoute,
+} from "./routes/attack-path";import { registerServiceRoute,
   servicesRoute,
 } from "./routes/service";
+
+import {
+  coMaintainersRoute,
+} from "./routes/co-maintainers";
+
+import {
+  lockfileResolveRoute,
+} from "./routes/lockfile-resolve";
+
+import {
+  typosquatRoute,
+} from "./routes/typosquat";
+
+import {
+  pypiIngestRoute,
+} from "./routes/pypi-ingest";
 
 import {
   errorResponse,
@@ -78,6 +91,19 @@ export async function router(
   }
 
   // ==========================================================
+  // POST /lockfiles/resolve
+  // Check which lockfile entries resolved to a
+  // compromised version
+  // ==========================================================
+
+  if (
+    url.pathname === "/lockfiles/resolve" &&
+    req.method === "POST"
+  ) {
+    return lockfileResolveRoute(req);
+  }
+
+  // ==========================================================
   // ONLY GET ROUTES AFTER THIS POINT
   // ==========================================================
 
@@ -103,6 +129,95 @@ export async function router(
   if (url.pathname === "/services") {
     return servicesRoute();
   }
+
+  // ==========================================================
+  // PyPI PACKAGE ROUTES
+  // ==========================================================
+
+  const pypiPrefix = "/pypi/";
+
+  if (
+    url.pathname.startsWith(
+      pypiPrefix,
+    )
+  ) {
+    const pypiPath =
+      url.pathname.slice(
+        pypiPrefix.length,
+      );
+
+    // ========================================================
+    // GET /pypi/:packageName/:version/ingest
+    // ========================================================
+
+    const ingestSuffix = "/ingest";
+
+    if (
+      pypiPath.endsWith(
+        ingestSuffix,
+      )
+    ) {
+      const pvPath =
+        pypiPath.slice(
+          0,
+          -ingestSuffix.length,
+        );
+
+      const sepIdx =
+        pvPath.lastIndexOf("/");
+
+      if (sepIdx === -1) {
+        return errorResponse(
+          "Expected /pypi/:packageName/:version/ingest",
+          400,
+        );
+      }
+
+      const pypiPkgName =
+        decodeURIComponent(
+          pvPath.slice(
+            0,
+            sepIdx,
+          ),
+        );
+
+      const pypiVersion =
+        decodeURIComponent(
+          pvPath.slice(
+            sepIdx + 1,
+          ),
+        );
+
+      if (!pypiPkgName) {
+        return errorResponse(
+          "Package name is required",
+          400,
+        );
+      }
+
+      if (!pypiVersion) {
+        return errorResponse(
+          "Version is required",
+          400,
+        );
+      }
+
+      const pypiDepth =
+        url.searchParams.get(
+          "depth",
+        ) ?? undefined;
+
+      return pypiIngestRoute(
+        pypiPkgName,
+        pypiVersion,
+        pypiDepth,
+      );
+    }
+  }
+
+  // ==========================================================
+  // BACK TO npm PACKAGE ROUTES
+  // ==========================================================
 
   // ==========================================================
   // PACKAGE ROUTES
@@ -558,9 +673,78 @@ export async function router(
       );
     }
 
+    // ========================================================
+    // GET /versions/:versionKey/co-maintainers
+    // ========================================================
+
+    const coMaintainersSuffix =
+      "/co-maintainers";
+
+    if (
+      versionPath.endsWith(
+        coMaintainersSuffix,
+      )
+    ) {
+      const versionKey =
+        decodeURIComponent(
+          versionPath.slice(
+            0,
+            -coMaintainersSuffix.length,
+          ),
+        );
+
+      if (!versionKey) {
+        return errorResponse(
+          "Version key is required",
+          400,
+        );
+      }
+
+      return coMaintainersRoute(
+        versionKey,
+      );
+    }
+
     return errorResponse(
       "Route not found",
       404,
+    );
+  }
+
+  // ==========================================================
+  // TYPOSQUAT ROUTES
+  // ==========================================================
+
+  const typosquatPrefix =
+    "/typosquat/";
+
+  if (
+    url.pathname.startsWith(
+      typosquatPrefix,
+    )
+  ) {
+    const packageName =
+      decodeURIComponent(
+        url.pathname.slice(
+          typosquatPrefix.length,
+        ),
+      );
+
+    if (!packageName) {
+      return errorResponse(
+        "Package name is required",
+        400,
+      );
+    }
+
+    const threshold =
+      url.searchParams.get(
+        "threshold",
+      ) ?? undefined;
+
+    return typosquatRoute(
+      packageName,
+      threshold,
     );
   }
 

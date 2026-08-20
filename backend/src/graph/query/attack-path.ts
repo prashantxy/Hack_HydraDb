@@ -242,10 +242,16 @@ export async function getAttackPaths(
    * ==========================================================
    * 6. BFS TRAVERSAL
    * ==========================================================
+   *
+   * Safety: cap total queries to prevent runaway BFS.
    */
 
+  const MAX_QUERIES = 500;
+  let queryCount = 0;
+
   while (
-    frontier.size > 0
+    frontier.size > 0 &&
+    queryCount < MAX_QUERIES
   ) {
     const next =
       new Map<string, FrontierState>();
@@ -359,27 +365,27 @@ export async function getAttackPaths(
        *       |
        *       v
        * Dependency Version
-       */
+       */        const dependencyResult =
+          await hydraQuery(
+            `
+              MATCH
+                (v:Version {id: $versionId})
+                  -[:DEPENDS_ON]->
+                (d:Version)
 
-      const dependencyResult =
-        await hydraQuery(
-          `
-            MATCH
-              (v:Version {id: $versionId})
-                -[:DEPENDS_ON]->
-              (d:Version)
-
-            RETURN
-              d.id AS id,
-              d.key AS key
-          `,
-          {
-            params: {
-              versionId:
-                state.versionId,
+              RETURN
+                d.id AS id,
+                d.key AS key
+            `,
+            {
+              params: {
+                versionId:
+                  state.versionId,
+              },
             },
-          },
-        );
+          );
+
+        queryCount += 1;
 
       const dependencies =
         cleanHydraRows<DependencyRow>(

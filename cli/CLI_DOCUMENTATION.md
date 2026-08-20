@@ -28,7 +28,7 @@
 
 ChainTrace CLI is a supply-chain security tool that:
 
-1. **Scans** project lockfiles to discover all dependencies
+1. **Scans** project lockfiles to discover all dependencies (npm, Bun, PyPI)
 2. **Analyzes** each dependency's risk score, blast radius, and attack paths
 3. **Reports** a security summary sorted by severity
 4. **Integrates** with CI/CD via exit codes
@@ -41,6 +41,8 @@ The CLI communicates with the ChainTrace backend API to perform graph-based anal
 │  (scan)  │      │  :3000       │      │  (graph DB)  │
 └──────────┘      └──────────────┘      └──────────────┘
 ```
+
+Supports both **npm** and **PyPI** ecosystems.
 
 ---
 
@@ -380,6 +382,9 @@ The CLI automatically detects and parses these lockfile types:
 | **npm** | `npm-shrinkwrap.json` | ✅ Supported | Same format as v1 |
 | **Bun** | `bun.lock` | ✅ Supported | JSON format |
 | **Bun** | `bun.lockb` | ✅ Supported | Binary format (detected) |
+| **pip** | `requirements.txt` | ✅ Supported | PEP 508 format |
+| **Poetry** | `poetry.lock` | ✅ Supported | TOML format (regex parser) |
+| **Pipenv** | `Pipfile.lock` | ✅ Supported | JSON format |
 | **pnpm** | `pnpm-lock.yaml` | ⚠️ Detected | Parsing not yet implemented |
 | **Yarn** | `yarn.lock` | ⚠️ Detected | Parsing not yet implemented |
 
@@ -393,6 +398,9 @@ Lockfiles are checked in this order:
 4. `npm-shrinkwrap.json`
 5. `pnpm-lock.yaml`
 6. `yarn.lock`
+7. `requirements.txt`
+8. `poetry.lock`
+9. `Pipfile.lock`
 
 ### npm lockfile parsing
 
@@ -435,6 +443,48 @@ Handles multiple Bun lockfile representations:
 1. **Primary**: `packages` map with version metadata objects
 2. **Fallback**: Recursive walk for `name@version` string patterns
 3. **JSONC**: Strips comments and trailing commas before parsing
+
+### requirements.txt parsing
+
+Parses PEP 508 dependency strings:
+
+```
+requests>=2.20
+flask[extra1,extra2]>=2.0
+numpy; python_version>="3.8"
+# comment
+-r other-requirements.txt
+```
+
+- Strips environment markers (`; ...`)
+- Strips extras (`[extra1,extra2]`)
+- Extracts exact version from `==` specifier
+- Skips URL requirements, options, comments
+
+### poetry.lock parsing
+
+Regex-based TOML parser that extracts `[[package]]` sections:
+
+```toml
+[[package]]
+name = "requests"
+version = "2.31.0"
+```
+
+### Pipfile.lock parsing
+
+JSON parser that reads `default` and `develop` sections:
+
+```json
+{
+  "default": {
+    "requests": {
+      "hashes": [...],
+      "version": "==2.31.0"
+    }
+  }
+}
+```
 
 ### Dependency object format
 
@@ -698,6 +748,8 @@ cli/
 ├── tsconfig.json
 └── .env
 ```
+
+**Note:** PyPI lockfile parsers (requirements.txt, poetry.lock, Pipfile.lock) are implemented in the backend at `backend/src/pypi/lockfiles/` and can be invoked via the backend API `GET /pypi/:name/:version/ingest` endpoint.
 
 ### API client methods
 
