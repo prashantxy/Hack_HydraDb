@@ -1,2 +1,5 @@
 hydradb/
 hydradb-data/
+.env
+.env.*
+!.env.example

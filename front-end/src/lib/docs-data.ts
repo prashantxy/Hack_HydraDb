@@ -642,7 +642,7 @@ export const CLI_COMMANDS: CliCommand[] = [
 ];
 
 export const CLI_ENV: [string, string, string][] = [
-  ["CHAINTRACE_API_URL", "http://localhost:3000", "Backend API base URL"],
+  ["CHAINTRACE_API_URL", "http://localhost:3001", "Backend API base URL"],
   ["GITHUB_CLIENT_ID", "—", "GitHub OAuth app client ID, required for github login"],
   ["CHAINTRACE_DEBUG", "disabled", "Verbose logging"],
 ];

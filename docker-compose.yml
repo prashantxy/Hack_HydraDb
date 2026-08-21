@@ -1,0 +1,76 @@
+# services:
+#   backend:
+#     build:
+#       context: ./backend
+#       dockerfile: Dockerfile
+#     container_name: chaintrace-api
+#     restart: unless-stopped
+#     ports:
+#       - "3001:3001"
+#     environment:
+#       - PORT=3001
+#       - HYDRA_URL=http://hydradb:8443
+#       - HYDRA_TOKEN=${HYDRA_TOKEN}
+#       - HYDRA_NAMESPACE=${HYDRA_NAMESPACE:-default}
+#       - HYDRA_CELL_ID=${HYDRA_CELL_ID:-cell-0}
+#     depends_on:
+#       hydradb:
+#         condition: service_healthy
+#     networks:
+#       - chaintrace-internal
+#     healthcheck:
+#       test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+#       interval: 10s
+#       timeout: 5s
+#       retries: 3
+#       start_period: 5s
+
+#   hydradb:
+#     image: ghcr.io/hydra-db/hydradb:latest
+#     container_name: chaintrace-hydradb
+#     restart: unless-stopped
+#     ports:
+#       - "8443:8443"
+#     # Exposed for local dev — production should remove this and use internal network only
+#     # Run as root for init (mkdir + write auth token), graph-node handles privileges
+#     user: root
+#     environment:
+#       - CLOUD_PROVIDER=local
+#       - LOCAL_PATH=/data/store
+#       - GRAPH_NAMESPACE=${HYDRA_NAMESPACE:-default}
+#       - GRAPH_ID=default
+#       - GRAPH_CELL_ID=${HYDRA_CELL_ID:-cell-0}
+#       - GRAPH_CELLS=cell-0
+#       - GRAPH_NODE_ID=node-0
+#       - GRAPH_ALLOW_PLAINTEXT=true
+#       - GRAPH_AUTH_TOKEN_FILE=/data/auth-token
+#       - GRAPH_DATA_CACHE_DIR=/data/cache
+#       - GRAPH_BOLT_NODE_ADDRESSES=node-0=127.0.0.1:7687
+#       - GRAPH_ADVERTISED_BOLT_ADDR=127.0.0.1:7687
+#       - RUST_MIN_STACK=33554432
+#     entrypoint: ["/bin/sh", "-c"]
+#     command:
+#       - |
+#         mkdir -p /data/store /data/cache &&
+#         chmod 777 /data/store /data/cache &&
+#         printf '%s\n' "${HYDRA_TOKEN}" > /data/auth-token &&
+#         exec /usr/local/bin/graph-node
+#     volumes:
+#       - hydradb-data:/data
+#     networks:
+#       - chaintrace-internal
+#     healthcheck:
+#       # HydraDB has no HTTP /health endpoint; check if graph-node is listening on 8443
+#       test: ["CMD-SHELL", "pgrep graph-node || exit 1"]
+#       interval: 10s
+#       timeout: 5s
+#       retries: 5
+#       start_period: 30s
+
+# networks:
+#   chaintrace-internal:
+#     driver: bridge
+
+# volumes:
+#   hydradb-data:
+#     driver: local

@@ -16,9 +16,7 @@ export const config = {
     cellId:
       process.env.HYDRA_CELL_ID ??
       "cell-0",
-  },
-
-  port:
+  },    port:
     Number(process.env.PORT ?? 3001),
 };
 

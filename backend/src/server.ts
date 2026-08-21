@@ -9,7 +9,7 @@ process.on("unhandledRejection", (reason) => {
 });
 
 const PORT = Number(
-  process.env.PORT ?? 3000,
+  process.env.PORT ?? 3001,
 );
 
 const server = Bun.serve({

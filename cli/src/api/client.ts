@@ -90,7 +90,7 @@ export interface IngestResponse {
 
 const API_URL =
   process.env.CHAINTRACE_API_URL ??
-  "http://localhost:3000";
+  "http://localhost:3001";
 
 /* ==========================================================
  * URL BUILDER

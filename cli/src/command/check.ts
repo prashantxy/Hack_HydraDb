@@ -47,7 +47,9 @@ export async function checkCommand(
     result,
   );
 
+  const dashboardUrl = process.env.CHAINTRACE_DASHBOARD_URL ?? "http://localhost:3000";
+
   console.log(
-    `Dashboard: http://localhost:3001/packages/${encodeURIComponent(packageName)}/${encodeURIComponent(version)}`,
+    `Dashboard: ${dashboardUrl}/packages/${encodeURIComponent(packageName)}/${encodeURIComponent(version)}`,
   );
 }

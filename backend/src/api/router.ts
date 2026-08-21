@@ -56,6 +56,24 @@ import {
   errorResponse,
 } from "./response";
 
+const CORS_HEADERS: Record<string, string> = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+function withCors(res: Response): Response {
+  const newHeaders = new Headers(res.headers);
+  for (const [k, v] of Object.entries(CORS_HEADERS)) {
+    if (!newHeaders.has(k)) newHeaders.set(k, v);
+  }
+  return new Response(res.body, {
+    status: res.status,
+    statusText: res.statusText,
+    headers: newHeaders,
+  });
+}
+
 export async function router(
   req: Request,
 ): Promise<Response> {
@@ -68,13 +86,7 @@ export async function router(
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 204,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods":
-          "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers":
-          "Content-Type, Authorization",
-      },
+      headers: CORS_HEADERS,
     });
   }
 
@@ -87,7 +99,7 @@ export async function router(
     url.pathname === "/services" &&
     req.method === "POST"
   ) {
-    return registerServiceRoute(req);
+    return withCors(await registerServiceRoute(req));
   }
 
   // ==========================================================
@@ -100,7 +112,7 @@ export async function router(
     url.pathname === "/lockfiles/resolve" &&
     req.method === "POST"
   ) {
-    return lockfileResolveRoute(req);
+    return withCors(await lockfileResolveRoute(req));
   }
 
   // ==========================================================
@@ -108,10 +120,7 @@ export async function router(
   // ==========================================================
 
   if (req.method !== "GET") {
-    return errorResponse(
-      "Method not allowed",
-      405,
-    );
+    return withCors(errorResponse("Method not allowed", 405));
   }
 
   // ==========================================================
@@ -119,7 +128,7 @@ export async function router(
   // ==========================================================
 
   if (url.pathname === "/health") {
-    return healthRoute();
+    return withCors(healthRoute());
   }
 
   // ==========================================================
@@ -127,7 +136,7 @@ export async function router(
   // ==========================================================
 
   if (url.pathname === "/services") {
-    return servicesRoute();
+    return withCors(await servicesRoute());
   }
 
   // ==========================================================
@@ -167,10 +176,10 @@ export async function router(
         pvPath.lastIndexOf("/");
 
       if (sepIdx === -1) {
-        return errorResponse(
+        return withCors(errorResponse(
           "Expected /pypi/:packageName/:version/ingest",
           400,
-        );
+        ));
       }
 
       const pypiPkgName =
@@ -189,17 +198,11 @@ export async function router(
         );
 
       if (!pypiPkgName) {
-        return errorResponse(
-          "Package name is required",
-          400,
-        );
+        return withCors(errorResponse("Package name is required", 400));
       }
 
       if (!pypiVersion) {
-        return errorResponse(
-          "Version is required",
-          400,
-        );
+        return withCors(errorResponse("Version is required", 400));
       }
 
       const pypiDepth =
@@ -207,11 +210,11 @@ export async function router(
           "depth",
         ) ?? undefined;
 
-      return pypiIngestRoute(
+      return withCors(await pypiIngestRoute(
         pypiPkgName,
         pypiVersion,
         pypiDepth,
-      );
+      ));
     }
   }
 
@@ -255,10 +258,7 @@ export async function router(
         );
 
       if (!packageName) {
-        return errorResponse(
-          "Package name is required",
-          400,
-        );
+        return withCors(errorResponse("Package name is required", 400));
       }
 
       const depth =
@@ -266,10 +266,10 @@ export async function router(
           "depth",
         ) ?? undefined;
 
-      return graphRoute(
+      return withCors(await graphRoute(
         packageName,
         depth,
-      );
+      ));
     }
 
     // ========================================================
@@ -296,10 +296,10 @@ export async function router(
         );
 
       if (separatorIndex === -1) {
-        return errorResponse(
+        return withCors(errorResponse(
           "Expected /packages/:packageName/:version/ingest",
           400,
-        );
+        ));
       }
 
       const packageName =
@@ -318,17 +318,11 @@ export async function router(
         );
 
       if (!packageName) {
-        return errorResponse(
-          "Package name is required",
-          400,
-        );
+        return withCors(errorResponse("Package name is required", 400));
       }
 
       if (!version) {
-        return errorResponse(
-          "Version is required",
-          400,
-        );
+        return withCors(errorResponse("Version is required", 400));
       }
 
       const depth =
@@ -336,11 +330,11 @@ export async function router(
           "depth",
         ) ?? undefined;
 
-      return ingestPackageRoute(
+      return withCors(await ingestPackageRoute(
         packageName,
         version,
         depth,
-      );
+      ));
     }
 
     // ========================================================
@@ -367,10 +361,10 @@ export async function router(
         );
 
       if (separatorIndex === -1) {
-        return errorResponse(
+        return withCors(errorResponse(
           "Expected /packages/:packageName/:version/analysis",
           400,
-        );
+        ));
       }
 
       const packageName =
@@ -389,17 +383,11 @@ export async function router(
         );
 
       if (!packageName) {
-        return errorResponse(
-          "Package name is required",
-          400,
-        );
+        return withCors(errorResponse("Package name is required", 400));
       }
 
       if (!version) {
-        return errorResponse(
-          "Version is required",
-          400,
-        );
+        return withCors(errorResponse("Version is required", 400));
       }
 
       const depth =
@@ -410,10 +398,10 @@ export async function router(
       const versionKey =
         `npm:${packageName}@${version}`;
 
-      return analysisRoute(
+      return withCors(await analysisRoute(
         versionKey,
         depth,
-      );
+      ));
     }
 
     // ========================================================
@@ -440,10 +428,10 @@ export async function router(
         );
 
       if (separatorIndex === -1) {
-        return errorResponse(
+        return withCors(errorResponse(
           "Expected /packages/:packageName/:version/risk",
           400,
-        );
+        ));
       }
 
       const packageName =
@@ -462,17 +450,11 @@ export async function router(
         );
 
       if (!packageName) {
-        return errorResponse(
-          "Package name is required",
-          400,
-        );
+        return withCors(errorResponse("Package name is required", 400));
       }
 
       if (!version) {
-        return errorResponse(
-          "Version is required",
-          400,
-        );
+        return withCors(errorResponse("Version is required", 400));
       }
 
       const depth =
@@ -483,10 +465,10 @@ export async function router(
       const versionKey =
         `npm:${packageName}@${version}`;
 
-      return riskRoute(
+      return withCors(await riskRoute(
         versionKey,
         depth,
-      );
+      ));
     }
 
     // ========================================================
@@ -499,15 +481,12 @@ export async function router(
       );
 
     if (!packageName) {
-      return errorResponse(
-        "Package name is required",
-        400,
-      );
+      return withCors(errorResponse("Package name is required", 400));
     }
 
-    return packageRoute(
-      packageName,
-    );
+    return withCors(await packageRoute(
+        packageName,
+      ));
   }
 
   // ==========================================================
@@ -548,15 +527,12 @@ export async function router(
         );
 
       if (!versionKey) {
-        return errorResponse(
-          "Version key is required",
-          400,
-        );
+        return withCors(errorResponse("Version key is required", 400));
       }
 
-      return versionDependenciesRoute(
+      return withCors(await versionDependenciesRoute(
         versionKey,
-      );
+      ));
     }
 
     // ========================================================
@@ -580,10 +556,7 @@ export async function router(
         );
 
       if (!versionKey) {
-        return errorResponse(
-          "Version key is required",
-          400,
-        );
+        return withCors(errorResponse("Version key is required", 400));
       }
 
       const depth =
@@ -591,10 +564,10 @@ export async function router(
           "depth",
         ) ?? undefined;
 
-      return blastRadiusRoute(
+      return withCors(await blastRadiusRoute(
         versionKey,
         depth,
-      );
+      ));
     }
 
     // ========================================================
@@ -618,10 +591,7 @@ export async function router(
         );
 
       if (!versionKey) {
-        return errorResponse(
-          "Version key is required",
-          400,
-        );
+        return withCors(errorResponse("Version key is required", 400));
       }
 
       const depth =
@@ -629,10 +599,10 @@ export async function router(
           "depth",
         ) ?? undefined;
 
-      return riskRoute(
+      return withCors(await riskRoute(
         versionKey,
         depth,
-      );
+      ));
     }
 
     // ========================================================
@@ -656,10 +626,7 @@ export async function router(
         );
 
       if (!versionKey) {
-        return errorResponse(
-          "Version key is required",
-          400,
-        );
+        return withCors(errorResponse("Version key is required", 400));
       }
 
       const depth =
@@ -667,10 +634,10 @@ export async function router(
           "depth",
         ) ?? undefined;
 
-      return attackPathRoute(
+      return withCors(await attackPathRoute(
         versionKey,
         depth,
-      );
+      ));
     }
 
     // ========================================================
@@ -694,21 +661,15 @@ export async function router(
         );
 
       if (!versionKey) {
-        return errorResponse(
-          "Version key is required",
-          400,
-        );
+        return withCors(errorResponse("Version key is required", 400));
       }
 
-      return coMaintainersRoute(
+      return withCors(await coMaintainersRoute(
         versionKey,
-      );
+      ));
     }
 
-    return errorResponse(
-      "Route not found",
-      404,
-    );
+    return withCors(errorResponse("Route not found", 404));
   }
 
   // ==========================================================
@@ -731,10 +692,7 @@ export async function router(
       );
 
     if (!packageName) {
-      return errorResponse(
-        "Package name is required",
-        400,
-      );
+      return withCors(errorResponse("Package name is required", 400));
     }
 
     const threshold =
@@ -742,18 +700,15 @@ export async function router(
         "threshold",
       ) ?? undefined;
 
-    return typosquatRoute(
+    return withCors(await typosquatRoute(
       packageName,
       threshold,
-    );
+    ));
   }
 
   // ==========================================================
   // GLOBAL 404
   // ==========================================================
 
-  return errorResponse(
-    "Route not found",
-    404,
-  );
+  return withCors(errorResponse("Route not found", 404));
 }

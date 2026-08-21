@@ -21,13 +21,13 @@
  *   GET  /pypi/:name/:version/ingest?depth=
  *
  * The backend serves Access-Control-Allow-Origin: *, so the browser
- * can call it directly. It listens on PORT (default 3000), which
+ * can call it directly. It listens on PORT (default 3001), which
  * collides with `next dev` — run it elsewhere and point
  * NEXT_PUBLIC_CHAINTRACE_API at it.
  */
 
 export const API_BASE = (
-  process.env.NEXT_PUBLIC_CHAINTRACE_API ?? "http://localhost:3000"
+  process.env.NEXT_PUBLIC_CHAINTRACE_API ?? "http://localhost:3001"
 ).replace(/\/$/, "");
 
 /* ── shared shapes ───────────────────────────────────────────── */

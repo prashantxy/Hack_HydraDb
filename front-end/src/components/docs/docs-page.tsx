@@ -342,7 +342,7 @@ EOF
 PORT=4000 bun run src/server.ts`}</Code>
       <p className="dx-p dx-dim">
         The server exits immediately if <code>HYDRA_URL</code> or{" "}
-        <code>HYDRA_TOKEN</code> is missing. It defaults to port 3000, which
+        <code>HYDRA_TOKEN</code> is missing. It defaults to port 3001, which
         collides with <code>next dev</code> — move one of them.
       </p>
 

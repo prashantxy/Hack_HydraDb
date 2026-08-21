@@ -374,8 +374,10 @@ export async function scanCommand(
     "Dashboard:",
   );
 
+  const dashboardUrl = process.env.CHAINTRACE_DASHBOARD_URL ?? "http://localhost:3000";
+
   console.log(
-    "http://localhost:3001",
+    dashboardUrl,
   );
 
   // ========================================================
