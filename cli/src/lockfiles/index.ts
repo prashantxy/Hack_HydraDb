@@ -7,6 +7,18 @@ import {
   type Dependency,
 } from "./npm";
 
+import {
+  parseBunLockfile,
+} from "./bun";
+
+import {
+  parsePnpmLockfile,
+} from "./pnpm-lock";
+
+import {
+  parseYarnLockfile,
+} from "./yarn-lock";
+
 export interface ScanResult {
   lockfile: {
     type: string;
@@ -37,6 +49,27 @@ export async function scanProject(
     case "npm":
       dependencies =
         await parseNpmLockfile(
+          lockfile.path,
+        );
+      break;
+
+    case "bun":
+      dependencies =
+        await parseBunLockfile(
+          lockfile.path,
+        );
+      break;
+
+    case "pnpm":
+      dependencies =
+        await parsePnpmLockfile(
+          lockfile.path,
+        );
+      break;
+
+    case "yarn":
+      dependencies =
+        await parseYarnLockfile(
           lockfile.path,
         );
       break;

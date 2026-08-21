@@ -17,10 +17,12 @@ export interface NormalizedPackageVersion {
   version: string;
   dependencies: NormalizedDependency[];
   maintainers: string[];
+  publishedAt: string | null;
 }
 
 export function normalizePackageVersion(
   metadata: NpmVersionMetadata,
+  publishedAt?: string | null,
 ): NormalizedPackageVersion {
   const dependencies: NormalizedDependency[] = [];
 
@@ -99,5 +101,6 @@ export function normalizePackageVersion(
     key,
     dependencies,
     maintainers,
+    publishedAt: publishedAt ?? null,
   };
 }

@@ -9,12 +9,27 @@ export interface LockfileEntry {
 export interface LockfileResolutionResult {
   compromisedVersion: string;
   compromisedPackage: string;
+  compromisedPublishedAt: string | null;
+  window: {
+    start: string;
+    end: string | null;
+    source: "provided" | "derived";
+  };
   checkedEntries: number;
   resolvedToCompromised: number;
   matches: Array<{
     name: string;
     version: string;
     inGraph: boolean;
+    publishedAt: string | null;
+    /*
+     * true  → entry version was published inside the
+     *         compromise window (lockfile could only
+     *         exist while the bad version was live)
+     * false → published outside the window
+     * null  → publish time unknown
+     */
+    resolvedDuringWindow: boolean | null;
     services: Array<{
       serviceName: string;
       environment: string | null;
@@ -32,6 +47,11 @@ interface MatchRow {
   hops: unknown;
 }
 
+export interface ResolveWindow {
+  start?: string | null;
+  end?: string | null;
+}
+
 /**
  * Given a compromised version key and a list of lockfile entries,
  * check which entries resolved to the compromised version and
@@ -39,6 +59,9 @@ interface MatchRow {
  *
  * This answers: "Which lockfiles resolved to the bad version
  * during the window it was live?"
+ *
+ * The compromise window defaults to [compromised.publishedAt, now)
+ * when not provided explicitly.
  *
  * Graph pattern:
  *
@@ -50,12 +73,13 @@ interface MatchRow {
 export async function resolveLockfileEntries(
   compromisedVersionKey: string,
   entries: LockfileEntry[],
+  window?: ResolveWindow,
 ): Promise<LockfileResolutionResult> {
   // 1. Check if the compromised version exists in the graph
   const compromisedCheck = await hydraQuery(
     `
       MATCH (v:Version {key: $key})
-      RETURN v.key AS key, v.packageName AS packageName
+      RETURN v.key AS key, v.packageName AS packageName, v.publishedAt AS publishedAt
     `,
     {
       params: { key: compromisedVersionKey },
@@ -68,12 +92,36 @@ export async function resolveLockfileEntries(
     );
   }
 
-  const compromisedRow = cleanHydraRows<{ key: unknown; packageName: unknown }>(
-    ["key", "packageName"],
+  const compromisedRow = cleanHydraRows<{ key: unknown; packageName: unknown; publishedAt: unknown }>(
+    ["key", "packageName", "publishedAt"],
     compromisedCheck.rows,
   )[0];
 
   const compromisedPackageName = String(compromisedRow.packageName);
+  const compromisedPublishedAt =
+    compromisedRow.publishedAt == null
+      ? null
+      : String(compromisedRow.publishedAt);
+
+  /*
+   * Effective compromise window. An explicitly provided
+   * start/end wins; otherwise derive from the compromised
+   * version's own publish time (live since publication).
+   */
+  const windowSource: "provided" | "derived" =
+    window?.start != null ? "provided" : "derived";
+
+  const windowStart =
+    window?.start ?? compromisedPublishedAt;
+
+  const windowEnd = window?.end ?? null;
+
+  if (!windowStart) {
+    throw new Error(
+      `No compromise window available: provide windowStart or ` +
+      `ingest ${compromisedVersionKey} with a registry that reports publish times`,
+    );
+  }
 
   // 2. Find the compromised version's ID for BFS
   const compromisedIdResult = await hydraQuery(
@@ -146,7 +194,7 @@ export async function resolveLockfileEntries(
     const entryExists = await hydraQuery(
       `
         MATCH (v:Version {key: $key})
-        RETURN v.id AS id
+        RETURN v.id AS id, v.publishedAt AS publishedAt
       `,
       { params: { key: entryKey } },
     );
@@ -156,13 +204,35 @@ export async function resolveLockfileEntries(
         name: entry.name,
         version: entry.version,
         inGraph: false,
+        publishedAt: null,
+        resolvedDuringWindow: null,
         services: [],
       });
       continue;
     }
 
+    const entryRow = cleanHydraRows<{ id: unknown; publishedAt: unknown }>(
+      ["id", "publishedAt"],
+      entryExists.rows,
+    )[0];
+
+    const entryPublishedAt =
+      entryRow.publishedAt == null
+        ? null
+        : String(entryRow.publishedAt);
+
+    /*
+     * Window check: was this pinned version published
+     * while the compromised version was live?
+     */
+    const resolvedDuringWindow =
+      entryPublishedAt == null
+        ? null
+        : entryPublishedAt >= windowStart &&
+          (windowEnd == null || entryPublishedAt <= windowEnd);
+
     // BFS from this version to see if it reaches the compromised version
-    const entryId = Number(entryExists.rows[0][0]?.value);
+    const entryId = Number(entryRow.id);
 
     // Find services that directly depend on this version
     const entryServices = serviceVersionRows.filter(
@@ -236,6 +306,8 @@ export async function resolveLockfileEntries(
       name: entry.name,
       version: entry.version,
       inGraph: true,
+      publishedAt: entryPublishedAt,
+      resolvedDuringWindow,
       services: affectedServices,
     });
   }
@@ -247,6 +319,12 @@ export async function resolveLockfileEntries(
   return {
     compromisedVersion: compromisedVersionKey,
     compromisedPackage: compromisedPackageName,
+    compromisedPublishedAt,
+    window: {
+      start: windowStart,
+      end: windowEnd,
+      source: windowSource,
+    },
     checkedEntries: entries.length,
     resolvedToCompromised: resolvedCount,
     matches,

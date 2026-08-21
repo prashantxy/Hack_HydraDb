@@ -11,12 +11,13 @@
 import {
   fetchPyPIPackage,
   fetchPyPIVersion,
+  releasePublishedAt,
 } from "./registry";
 import {
   normalizePyPIVersion,
   type NormalizedDependency,
 } from "./normalize";
-import { resolvePyPIVersion } from "./resolver";
+import { resolvePyPIVersionMeta } from "./resolver";
 import {
   upsertPackages,
   upsertVersions,
@@ -65,6 +66,7 @@ interface ResolvedDependency {
   name: string;
   range: string;
   version: string;
+  publishedAt: string | null;
   type: "runtime" | "optional" | "peer";
 }
 
@@ -166,14 +168,15 @@ async function resolveDependencies(
 ): Promise<ResolvedDependency[]> {
   return mapConcurrent(dependencies, concurrency, async (dep) => {
     try {
-      const resolvedVersion = await resolvePyPIVersion(
+      const meta = await resolvePyPIVersionMeta(
         dep.name,
         dep.range,
       );
       return {
         name: dep.name,
         range: dep.range,
-        version: resolvedVersion,
+        version: meta.version,
+        publishedAt: meta.publishedAt,
         type: dep.type,
       };
     } catch {
@@ -263,6 +266,7 @@ export async function ingestPyPIPackage(
           // PyPI releases entries are distribution file metadata,
           // not version info. Always use info or fetch specific version.
           let versionInfo;
+          let rootPublishedAt: string | null = null;
 
           try {
             const pkgData = await fetchPyPIPackage(ref.packageName);
@@ -272,18 +276,29 @@ export async function ingestPyPIPackage(
             if (pkgData.info.version === ref.version) {
               versionInfo = pkgData.info;
             }
+            // Publish time comes from the release's distribution files
+            rootPublishedAt = releasePublishedAt(
+              pkgData.releases?.[ref.version],
+            );
           } catch {
             // ignore — will fall through to version-specific fetch
           }
 
           if (!versionInfo) {
-            versionInfo = await fetchPyPIVersion(
+            const versionData = await fetchPyPIVersion(
               ref.packageName,
               ref.version,
             );
+            versionInfo = versionData.info;
+            if (!rootPublishedAt) {
+              rootPublishedAt = versionData.publishedAt;
+            }
           }
 
-          const normalized = normalizePyPIVersion(versionInfo);
+          const normalized = normalizePyPIVersion(
+            versionInfo,
+            rootPublishedAt,
+          );
           const resolvedDeps = await resolveDependencies(
             normalized.dependencies,
             concurrency,
@@ -334,6 +349,7 @@ export async function ingestPyPIPackage(
         packageName: normalized.packageName,
         version: normalized.version,
         ecosystem: "npm",
+        publishedAt: normalized.publishedAt,
       } as VersionVertex);
 
       // Package → Version edge
@@ -377,6 +393,7 @@ export async function ingestPyPIPackage(
           packageName: dep.name,
           version: dep.version,
           ecosystem: "npm",
+          publishedAt: dep.publishedAt,
         } as VersionVertex);
 
         // Package → Version

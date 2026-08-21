@@ -15,7 +15,7 @@ import {
   type MaintainsEdge,
 } from "../graph/query/maintainers";
 
-import { resolveVersion } from "./resolver";
+import { resolveVersionMeta } from "./resolver";
 
 import {
   upsertPackages,
@@ -60,6 +60,7 @@ interface ResolvedDependency {
   name: string;
   range: string;
   version: string;
+  publishedAt: string | null;
   type: "runtime" | "optional" | "peer";
 }
 
@@ -209,7 +210,7 @@ async function resolveDependencies(
     dependencies,
     concurrency,
     async (dependency) => {
-      const version = await resolveVersion(
+      const meta = await resolveVersionMeta(
         dependency.name,
         dependency.range,
       );
@@ -217,7 +218,8 @@ async function resolveDependencies(
       return {
         name: dependency.name,
         range: dependency.range,
-        version,
+        version: meta.version,
+        publishedAt: meta.publishedAt,
         type: dependency.type,
       };
     },
@@ -247,8 +249,22 @@ async function fetchAndNormalize(
     );
   }
 
+  /*
+   * Publish timestamp from the registry's
+   * time map (ISO 8601), when available.
+   */
+  const rawPublishedAt =
+    metadata.time?.[ref.version] ?? null;
+
+  const publishedAt =
+    rawPublishedAt &&
+    !Number.isNaN(Date.parse(rawPublishedAt))
+      ? new Date(rawPublishedAt).toISOString()
+      : null;
+
   return normalizePackageVersion(
     versionMetadata,
+    publishedAt,
   );
 }
 
@@ -491,6 +507,8 @@ export async function ingestPackage(
           version:
             normalized.version,
           ecosystem: "npm",
+          publishedAt:
+            normalized.publishedAt,
         },
       );
 
@@ -640,6 +658,8 @@ export async function ingestPackage(
               dependency.version,
             ecosystem:
               "npm",
+            publishedAt:
+              dependency.publishedAt,
           },
         );
 

@@ -6,6 +6,7 @@
     "dev": "bun --watch src/server.ts",
     "start": "bun src/server.ts",
     "ingest": "bun scripts/ingest-package.ts",
+    "demo": "bun scripts/demo.ts",
     "test:npm": "bun scripts/test-npm.ts",
     "test:resolver": "bun scripts/test-resolver.ts"
   },

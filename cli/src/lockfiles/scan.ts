@@ -11,6 +11,14 @@ import {
   parseBunLockfile,
 } from "./bun";
 
+import {
+  parsePnpmLockfile,
+} from "./pnpm-lock";
+
+import {
+  parseYarnLockfile,
+} from "./yarn-lock";
+
 export interface ScanResult {
   lockfile: {
     type: string;
@@ -108,10 +116,11 @@ export async function scanProject(
      */
 
     case "pnpm":
-      throw new Error(
-        "pnpm-lock.yaml detected, " +
-        "but pnpm parsing is not implemented yet",
-      );
+      dependencies =
+        await parsePnpmLockfile(
+          lockfile.path,
+        );
+      break;
 
     /*
      * ------------------------------------------------------
@@ -120,10 +129,11 @@ export async function scanProject(
      */
 
     case "yarn":
-      throw new Error(
-        "yarn.lock detected, " +
-        "but Yarn parsing is not implemented yet",
-      );
+      dependencies =
+        await parseYarnLockfile(
+          lockfile.path,
+        );
+      break;
 
     /*
      * ------------------------------------------------------

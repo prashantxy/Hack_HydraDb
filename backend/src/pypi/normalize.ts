@@ -20,6 +20,7 @@ export interface NormalizedPackageVersion {
   version: string;
   dependencies: NormalizedDependency[];
   maintainers: string[];
+  publishedAt: string | null;
 }
 
 // ── PEP 508 dependency string parser ──────────────────────────
@@ -158,6 +159,7 @@ function extractMaintainers(info: PyPIVersionInfo): string[] {
 
 export function normalizePyPIVersion(
   info: PyPIVersionInfo,
+  publishedAt?: string | null,
 ): NormalizedPackageVersion {
   const packageName = normalizePkgName(info.name);
   const version = info.version;
@@ -172,5 +174,6 @@ export function normalizePyPIVersion(
     key,
     dependencies,
     maintainers,
+    publishedAt: publishedAt ?? null,
   };
 }

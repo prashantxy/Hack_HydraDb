@@ -23,6 +23,14 @@ export interface NpmRegistryResponse {
   versions: Record<string, NpmVersionMetadata>;
 
   "dist-tags"?: Record<string, string>;
+
+  /*
+   * Publish timestamps keyed by version.
+   *
+   * Example:
+   * { "1.7.2": "2024-07-15T12:00:00.000Z", created: ..., modified: ... }
+   */
+  time?: Record<string, string>;
 }
 
 export async function fetchNpmPackage(

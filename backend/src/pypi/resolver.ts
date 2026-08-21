@@ -5,7 +5,15 @@
  * resolve to the latest matching concrete version from PyPI.
  */
 
-import { fetchPyPIPackage } from "./registry";
+import {
+  fetchPyPIPackage,
+  releasePublishedAt,
+} from "./registry";
+
+export interface ResolvedPyPIVersionMeta {
+  version: string;
+  publishedAt: string | null;
+}
 
 /**
  * Parse a PEP 440 version specifier and check if a version satisfies it.
@@ -130,15 +138,13 @@ function isPreRelease(version: string): boolean {
 }
 
 /**
- * Resolve a PEP 440 version specifier to a concrete version.
- *
- * Fetches all versions from PyPI and returns the latest
- * matching non-pre-release version.
+ * Resolve a PEP 440 version specifier to a concrete version
+ * and report when that version was published.
  */
-export async function resolvePyPIVersion(
+export async function resolvePyPIVersionMeta(
   packageName: string,
   range: string,
-): Promise<string> {
+): Promise<ResolvedPyPIVersionMeta> {
   const pkg = await fetchPyPIPackage(packageName);
   const versions = Object.keys(pkg.releases).filter(
     (v) => !isPreRelease(v),
@@ -163,5 +169,22 @@ export async function resolvePyPIVersion(
   // Sort descending and pick the latest
   matching.sort((a, b) => compareVersions(b, a));
 
-  return matching[0];
+  const version = matching[0];
+
+  return {
+    version,
+    publishedAt: releasePublishedAt(pkg.releases[version]),
+  };
+}
+
+export async function resolvePyPIVersion(
+  packageName: string,
+  range: string,
+): Promise<string> {
+  const meta = await resolvePyPIVersionMeta(
+    packageName,
+    range,
+  );
+
+  return meta.version;
 }

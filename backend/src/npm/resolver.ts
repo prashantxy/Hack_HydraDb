@@ -1,13 +1,24 @@
 import semver from "semver";
 
+import type { NpmRegistryResponse } from "./registry";
+
 interface NpmPackageMetadata {
   versions: Record<string, unknown>;
 }
 
-export async function resolveVersion(
+export interface ResolvedVersionMeta {
+  version: string;
+  publishedAt: string | null;
+}
+
+/**
+ * Resolve a semver range to a concrete version and
+ * report when that version was published.
+ */
+export async function resolveVersionMeta(
   packageName: string,
   range: string,
-): Promise<string> {
+): Promise<ResolvedVersionMeta> {
   const url =
     `https://registry.npmjs.org/${encodeURIComponent(packageName)}`;
 
@@ -21,7 +32,7 @@ export async function resolveVersion(
   }
 
   const data =
-    (await response.json()) as NpmPackageMetadata;
+    (await response.json()) as NpmPackageMetadata & NpmRegistryResponse;
 
   const versions = Object.keys(data.versions)
     .filter((version) => semver.valid(version))
@@ -38,5 +49,26 @@ export async function resolveVersion(
     );
   }
 
-  return resolved;
+  const publishedAt =
+    data.time?.[resolved] ?? null;
+
+  return {
+    version: resolved,
+    publishedAt:
+      publishedAt && !Number.isNaN(Date.parse(publishedAt))
+        ? new Date(publishedAt).toISOString()
+        : null,
+  };
+}
+
+export async function resolveVersion(
+  packageName: string,
+  range: string,
+): Promise<string> {
+  const meta = await resolveVersionMeta(
+    packageName,
+    range,
+  );
+
+  return meta.version;
 }

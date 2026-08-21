@@ -1,6 +1,7 @@
 import {
   resolveLockfileEntries,
   type LockfileEntry,
+  type ResolveWindow,
 } from "../../graph/query/lockfile-resolve";
 import { errorResponse, json } from "../response";
 
@@ -57,10 +58,47 @@ export async function lockfileResolveRoute(
       );
     }
 
-    const result = await resolveLockfileEntries(
-      compromisedVersion,
-      entries,
-    );
+  /*
+   * Optional compromise window (ISO 8601).
+   * Defaults to [compromised.publishedAt, now) when omitted.
+   */
+  let window: ResolveWindow | undefined;
+
+  const rawWindowStart = (body as Record<string, unknown>).windowStart;
+  const rawWindowEnd = (body as Record<string, unknown>).windowEnd;
+
+  if (rawWindowStart != null || rawWindowEnd != null) {
+    if (
+      (rawWindowStart != null &&
+        (typeof rawWindowStart !== "string" ||
+          Number.isNaN(Date.parse(rawWindowStart)))) ||
+      (rawWindowEnd != null &&
+        (typeof rawWindowEnd !== "string" ||
+          Number.isNaN(Date.parse(rawWindowEnd))))
+    ) {
+      return errorResponse(
+        "windowStart and windowEnd must be ISO 8601 timestamps",
+        400,
+      );
+    }
+
+    window = {
+      start:
+        rawWindowStart != null
+          ? new Date(rawWindowStart).toISOString()
+          : null,
+      end:
+        rawWindowEnd != null
+          ? new Date(rawWindowEnd).toISOString()
+          : null,
+    };
+  }
+
+  const result = await resolveLockfileEntries(
+    compromisedVersion,
+    entries,
+    window,
+  );
 
     return json(result);
   } catch (error) {
