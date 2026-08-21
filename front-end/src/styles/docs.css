@@ -1,0 +1,589 @@
+/* ==========================================================
+   ChainTrace docs — a reference, not a brochure.
+   Inherits every token from chaintrace.css; this file adds the
+   two-column reading layout and the endpoint cards.
+   ========================================================== */
+
+.dx {
+  min-height: 100dvh;
+}
+
+/* ── top bar ─────────────────────────────────────────────────── */
+
+.dx-top {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.6rem clamp(0.85rem, 2.5vw, 1.6rem);
+  border-bottom: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.88);
+  backdrop-filter: blur(12px);
+}
+
+.dx-brand {
+  display: block;
+  width: 104px;
+  color: var(--fg);
+  flex: none;
+}
+
+.dx-brand svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.dx-top-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--line-2);
+}
+
+.dx-top-title {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+
+.dx-top-links {
+  margin-left: auto;
+  display: flex;
+  gap: 1.1rem;
+}
+
+.dx-top-links a {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+  transition: color 0.16s var(--ease);
+}
+
+.dx-top-links a:hover {
+  color: var(--sig);
+}
+
+/* ── layout ──────────────────────────────────────────────────── */
+
+.dx-body {
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr);
+  width: min(100%, 1320px);
+  margin-inline: auto;
+}
+
+.dx-toc {
+  border-right: 1px solid var(--line);
+  padding: 1.5rem 0.85rem;
+}
+
+.dx-toc-in {
+  position: sticky;
+  top: 72px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  max-height: calc(100dvh - 96px);
+  overflow-y: auto;
+}
+
+.dx-toc-link {
+  display: block;
+  padding: 0.4rem 0.6rem;
+  font-size: 13px;
+  color: var(--fg-3);
+  border-left: 1px solid transparent;
+  transition:
+    color 0.16s var(--ease),
+    border-color 0.16s var(--ease);
+}
+
+.dx-toc-link:hover {
+  color: var(--fg);
+}
+
+.dx-toc-link.is-active {
+  color: var(--sig);
+  border-left-color: var(--sig);
+}
+
+.dx-toc-link.is-sub {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  padding-left: 1.5rem;
+  color: var(--fg-4);
+}
+
+.dx-toc-link.is-sub:hover,
+.dx-toc-link.is-sub.is-active {
+  color: var(--sig);
+}
+
+.dx-main {
+  min-width: 0;
+  padding: clamp(1.75rem, 4vw, 3.5rem) clamp(1rem, 3.5vw, 3rem)
+    clamp(4rem, 8vw, 7rem);
+}
+
+.dx-main > section {
+  padding-bottom: clamp(2.5rem, 5vw, 4rem);
+  margin-bottom: clamp(2.5rem, 5vw, 4rem);
+  border-bottom: 1px solid var(--line);
+}
+
+.dx-main > section:last-of-type {
+  border-bottom: 0;
+}
+
+@media (max-width: 940px) {
+  .dx-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dx-toc {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    padding: 0.75rem 0.85rem;
+  }
+  .dx-toc-in {
+    position: static;
+    flex-direction: row;
+    overflow-x: auto;
+    max-height: none;
+    gap: 0.3rem;
+  }
+  .dx-toc-link {
+    white-space: nowrap;
+    border-left: 0;
+    border-bottom: 1px solid transparent;
+  }
+  .dx-toc-link.is-active {
+    border-left-color: transparent;
+    border-bottom-color: var(--sig);
+  }
+  .dx-toc-sub {
+    display: none;
+  }
+}
+
+/* ── type ────────────────────────────────────────────────────── */
+
+.dx-h1 {
+  font-family: var(--font-schibsted), sans-serif;
+  font-weight: 400;
+  font-size: clamp(2rem, 4.5vw, 3rem);
+  letter-spacing: -0.035em;
+  line-height: 1.02;
+  margin: 0.9rem 0 1.2rem;
+}
+
+.dx-h2 {
+  font-family: var(--font-schibsted), sans-serif;
+  font-weight: 400;
+  font-size: clamp(1.5rem, 2.8vw, 2rem);
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+  margin: 2.5rem 0 1rem;
+  scroll-margin-top: 84px;
+}
+
+.dx-h2:first-child {
+  margin-top: 0;
+}
+
+.dx-h3 {
+  font-family: var(--font-schibsted), sans-serif;
+  font-weight: 500;
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+  margin: 2.75rem 0 0.6rem;
+  scroll-margin-top: 84px;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.dx-h2 a,
+.dx-h3 a {
+  color: inherit;
+}
+
+.dx-h2 a:hover::after,
+.dx-h3 a:hover::after {
+  content: " #";
+  color: var(--sig);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 0.7em;
+}
+
+.dx-lede {
+  color: var(--fg-2);
+  font-size: clamp(0.95rem, 1.15vw, 1.0625rem);
+  line-height: 1.7;
+  max-width: 74ch;
+}
+
+.dx-p {
+  color: var(--fg-2);
+  font-size: 14.5px;
+  line-height: 1.75;
+  max-width: 76ch;
+  margin: 0.75rem 0;
+}
+
+.dx-p.dx-dim,
+.dx-dim {
+  color: var(--fg-3);
+}
+
+.dx-p code,
+.dx-lede code,
+.dx-note code {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 0.88em;
+  color: var(--fg);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.1em 0.35em;
+  border: 1px solid var(--line);
+}
+
+.dx-p a,
+.dx-lede a,
+.dx-note a,
+.dx-link {
+  color: var(--sig);
+  border-bottom: 1px solid rgba(255, 90, 38, 0.3);
+}
+
+.dx-p a:hover,
+.dx-link:hover {
+  border-bottom-color: var(--sig);
+}
+
+.dx-label {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--fg-4);
+  margin: 1.5rem 0 0.55rem;
+}
+
+.dx-steps {
+  counter-reset: dxstep;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.3rem;
+}
+
+.dx-steps li {
+  counter-increment: dxstep;
+  font-size: 14px;
+  color: var(--fg-2);
+  display: flex;
+  gap: 0.7rem;
+  align-items: baseline;
+}
+
+.dx-steps li::before {
+  content: counter(dxstep, decimal-leading-zero);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 10px;
+  color: var(--sig);
+  flex: none;
+}
+
+/* ── code ────────────────────────────────────────────────────── */
+
+.dx-code {
+  position: relative;
+  border: 1px solid var(--line);
+  background: var(--ink-1);
+  margin: 0.7rem 0 1.1rem;
+}
+
+.dx-code pre {
+  padding: 0.9rem 1rem;
+  overflow-x: auto;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--fg-2);
+  white-space: pre;
+}
+
+.dx-code-lang {
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fg-4);
+  padding: 0.3rem 0.5rem;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: var(--ink-2);
+}
+
+.dx-code-lang ~ pre {
+  padding-top: 2rem;
+}
+
+.dx-copy {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-4);
+  background: var(--ink-2);
+  border: 1px solid var(--line);
+  padding: 0.22rem 0.45rem;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 0.16s var(--ease),
+    color 0.16s var(--ease),
+    border-color 0.16s var(--ease);
+}
+
+.dx-code:hover .dx-copy,
+.dx-copy:focus-visible {
+  opacity: 1;
+}
+
+.dx-copy:hover {
+  color: var(--sig);
+  border-color: var(--sig);
+}
+
+/* ── tables ──────────────────────────────────────────────────── */
+
+.dx-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  margin: 0.6rem 0 1.2rem;
+}
+
+.dx-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.dx-table th {
+  text-align: left;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-weight: 500;
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--fg-4);
+  padding: 0.55rem 0.8rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--ink-1);
+  white-space: nowrap;
+}
+
+.dx-table td {
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: var(--fg-2);
+  vertical-align: top;
+  line-height: 1.6;
+}
+
+.dx-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.dx-table b {
+  color: var(--fg);
+  font-weight: 500;
+}
+
+.dx-param,
+.dx-type,
+.dx-status {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.dx-param {
+  color: var(--fg);
+}
+
+.dx-param em {
+  font-style: normal;
+  color: var(--sig);
+}
+
+.dx-type {
+  color: var(--fg-3);
+}
+
+.dx-status {
+  color: var(--med);
+}
+
+/* ── endpoint cards ──────────────────────────────────────────── */
+
+.dx-ep {
+  border: 1px solid var(--line);
+  background: var(--ink-1);
+  margin: 1.1rem 0 1.75rem;
+  scroll-margin-top: 84px;
+}
+
+.dx-ep-head {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--ink-2);
+}
+
+.dx-ep-path {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 13px;
+  color: var(--fg);
+  word-break: break-all;
+}
+
+.dx-ep-body {
+  padding: 0.5rem 0.9rem 1.1rem;
+}
+
+.dx-ep-body > .dx-label:first-child {
+  margin-top: 0.8rem;
+}
+
+.dx-method {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  padding: 0.2rem 0.45rem;
+  border: 1px solid currentColor;
+  flex: none;
+}
+
+.dx-method.is-get {
+  color: var(--low);
+}
+
+.dx-method.is-post {
+  color: var(--sig);
+}
+
+.dx-writes {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--crit);
+  border: 1px solid rgba(240, 69, 60, 0.4);
+  padding: 0.18rem 0.4rem;
+}
+
+.dx-ep-console {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+  transition: color 0.16s var(--ease);
+}
+
+.dx-ep-console:hover {
+  color: var(--sig);
+}
+
+/* ── notes ───────────────────────────────────────────────────── */
+
+.dx-note {
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--sig);
+  background: rgba(255, 90, 38, 0.04);
+  padding: 0.9rem 1rem;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--fg-2);
+  margin: 1.3rem 0;
+  max-width: 78ch;
+}
+
+.dx-note b {
+  color: var(--fg);
+  font-weight: 500;
+}
+
+.dx-note.is-warn {
+  border-left-color: var(--med);
+  background: rgba(240, 192, 76, 0.04);
+}
+
+/* ── chips ───────────────────────────────────────────────────── */
+
+.dx-sev,
+.dx-status-chip {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  padding: 0.15rem 0.4rem;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+
+.dx-sev.is-critical {
+  color: var(--crit);
+}
+.dx-sev.is-high {
+  color: var(--high);
+}
+.dx-sev.is-medium {
+  color: var(--med);
+}
+.dx-sev.is-low {
+  color: var(--low);
+}
+
+.dx-status-chip.is-ok {
+  color: var(--low);
+}
+
+.dx-status-chip.is-partial {
+  color: var(--med);
+}
+
+/* ── footer ──────────────────────────────────────────────────── */
+
+.dx-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.6rem 1.5rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid var(--line);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 10.5px;
+  color: var(--fg-4);
+}

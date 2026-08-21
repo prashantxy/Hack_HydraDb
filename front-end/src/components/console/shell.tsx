@@ -83,6 +83,10 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
           <p className="cs-rail-label" style={{ marginTop: "1.5rem" }}>
             Reference
           </p>
+          <Link href="/docs" className="cs-rail-link">
+            <span className="cs-rail-name">Documentation</span>
+            <span className="cs-rail-route">/docs</span>
+          </Link>
           <Link href="/" className="cs-rail-link">
             <span className="cs-rail-name">Landing page</span>
             <span className="cs-rail-route">/</span>

@@ -814,8 +814,8 @@ export function Closing() {
               Scan a repo
               <PixelArrow />
             </a>
-            <a href="/console" className="ct-btn ct-btn-ghost">
-              Open the console
+            <a href="/docs" className="ct-btn ct-btn-ghost">
+              Read the docs
               <PixelArrow />
             </a>
           </div>
