@@ -25,7 +25,7 @@ ChainTrace crawls **npm** and **PyPI** registries, builds a dependency graph (pa
 | [`cli/`](./cli) | `chaintrace` CLI — scan lockfiles, check packages, GitHub device-flow login | Bun + TypeScript (compiled to a single binary) |
 | [`front-end/`](./front-end) | Marketing site + operator console (3D dependency graph, risk dashboards) | Next.js 16, React 19, Tailwind 4, three.js |
 | [`hydradb/`](./hydradb) | The graph database itself — object-store-native, OpenCypher + Bolt, GraphBLAS traversal | Rust (AGPL-3.0) |
-| `docker-compose.yml` | Backend + HydraDB orchestration (currently commented out — see [DEPLOYMENT.md](./DEPLOYMENT.md)) | Docker |
+
 | `.env.example` | Root environment template for HydraDB credentials | — |
 
 ## What it does
