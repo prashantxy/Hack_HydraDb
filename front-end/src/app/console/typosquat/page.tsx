@@ -5,13 +5,18 @@ import { useCallback, useMemo, useState } from "react";
 import { api, type Typosquat } from "@/lib/api";
 import { demoTyposquat } from "@/lib/demo";
 import { useApi } from "@/lib/use-api";
+import {
+  useReportSource,
+  useStatus,
+  useTarget,
+} from "@/components/console/console-state";
 import { PageHead } from "@/components/console/shell";
 import {
   Panel,
   PopularityChip,
-  QueryBar,
+  DepthDial,
+  TargetBar,
   RawJson,
-  SourceBadge,
   Stat,
   Table,
 } from "@/components/console/ui";
@@ -26,9 +31,14 @@ import {
  */
 
 export default function TyposquatPage() {
-  const [name, setName] = useState("express");
   const [threshold, setThreshold] = useState(2);
-  const [query, setQuery] = useState({ name: "express", threshold: 2 });
+
+  const { target } = useTarget();
+  const { nonce } = useStatus();
+  const query = useMemo(
+    () => ({ name: target.name, threshold }),
+    [target.name, threshold],
+  );
 
   const load = useCallback(
     (signal: AbortSignal) =>
@@ -40,11 +50,13 @@ export default function TyposquatPage() {
     [query],
   );
 
-  const { data, error, source, loading, reload } = useApi<Typosquat>(
-    `typosquat:${query.name}:${query.threshold}`,
+  const { data, error, source, loading } = useApi<Typosquat>(
+    `typosquat:${query.name}:${query.threshold}:${nonce}`,
     load,
     fallback,
   );
+
+  useReportSource(source, error);
 
   const candidates = useMemo(
     () =>
@@ -62,8 +74,6 @@ export default function TyposquatPage() {
     (c) => c.editDistance === 1 || (c.sharedPrefix && c.sharedSuffix),
   ).length;
 
-  const run = () =>
-    setQuery({ name: name.trim() || "express", threshold });
 
   return (
     <>
@@ -71,30 +81,15 @@ export default function TyposquatPage() {
         eyebrow="Typosquat"
         title="Names close enough to be mistaken"
         lede="Edit distance across every package name the graph holds. One transposed character in an install command is the whole attack, so proximity plus a shared prefix is the signal worth acting on."
-      >
-        <SourceBadge
-          source={source}
-          error={error}
-          loading={loading}
-          onReload={reload}
-        />
-      </PageHead>
-
-      <QueryBar
-        fields={[
-          {
-            id: "name",
-            label: "package name",
-            value: name,
-            onChange: setName,
-            placeholder: "express",
-          },
-        ]}
-        depth={threshold}
-        onDepth={setThreshold}
-        depthLabel="edit distance"
-        onSubmit={run}
       />
+
+      <TargetBar version={false} depth={false}>
+        <DepthDial
+          value={threshold}
+          onChange={setThreshold}
+          label="edit distance"
+        />
+      </TargetBar>
 
       <div className="cs-stats">
         <Stat label="Target" value={data?.targetPackage ?? "—"} />

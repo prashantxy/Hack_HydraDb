@@ -6,15 +6,22 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import { api, API_BASE } from "@/lib/api";
 import { Wordmark } from "@/components/site/primitives";
+import { useStatus } from "./console-state";
 
 /*
  * Console shell. The rail names the endpoint behind each view, so
  * the navigation doubles as the API map.
+ *
+ * Connection state lives in exactly one place — the top right — and
+ * describes what is actually on screen: live if the last request came
+ * from the API, sample if it fell back. Pages report into it via
+ * useReportSource instead of printing their own badges.
  */
 
 const NAV = [
   { href: "/console", label: "Overview", route: "GET /health" },
   { href: "/console/graph", label: "Graph", route: "/packages/:n/graph" },
+  { href: "/console/analysis", label: "Analysis", route: "/:n/:v/analysis" },
   { href: "/console/blast", label: "Blast radius", route: "/blast-radius" },
   { href: "/console/paths", label: "Attack paths", route: "/attack-path" },
   { href: "/console/risk", label: "Risk", route: "/risk" },
@@ -32,28 +39,8 @@ const NAV = [
   { href: "/console/services", label: "Services", route: "GET /services" },
 ];
 
-type Health = "checking" | "up" | "down";
-
 export function ConsoleShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const [health, setHealth] = useState<Health>("checking");
-
-  useEffect(() => {
-    const ac = new AbortController();
-    let alive = true;
-
-    api
-      .health(ac.signal)
-      .then(() => alive && setHealth("up"))
-      .catch((e: Error) => {
-        if (alive && e.name !== "AbortError") setHealth("down");
-      });
-
-    return () => {
-      alive = false;
-      ac.abort();
-    };
-  }, []);
 
   return (
     <div className="ct cs">
@@ -67,17 +54,7 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
         <span className="cs-top-sep" aria-hidden />
         <span className="cs-top-title">Console</span>
 
-        <div className="cs-top-right">
-          <span className={`cs-health is-${health}`}>
-            <i aria-hidden />
-            {health === "checking"
-              ? "checking api"
-              : health === "up"
-                ? "api online"
-                : "api offline"}
-          </span>
-          <code className="cs-top-base">{API_BASE}</code>
-        </div>
+        <ConnectionState />
       </header>
 
       <div className="cs-body">
@@ -115,6 +92,61 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
         <main className="cs-main">{children}</main>
       </div>
     </div>
+  );
+}
+
+/* the one connection indicator in the app */
+function ConnectionState() {
+  const { source, error, refresh } = useStatus();
+  const [probing, setProbing] = useState(true);
+
+  /* an initial probe so the indicator is meaningful before the first
+   * page request resolves */
+  useEffect(() => {
+    const ac = new AbortController();
+    let alive = true;
+
+    api
+      .health(ac.signal)
+      .catch(() => undefined)
+      .finally(() => {
+        if (alive) setProbing(false);
+      });
+
+    return () => {
+      alive = false;
+      ac.abort();
+    };
+  }, []);
+
+  const state = probing ? "checking" : source === "live" ? "live" : "sample";
+
+  const label =
+    state === "checking"
+      ? "connecting"
+      : state === "live"
+        ? "live"
+        : "sample data";
+
+  return (
+    <button
+      type="button"
+      className={`cs-conn is-${state}`}
+      onClick={() => {
+        setProbing(true);
+        refresh();
+        window.setTimeout(() => setProbing(false), 400);
+      }}
+      title={
+        state === "sample"
+          ? `${error ?? "API unreachable"} — showing the sample dataset. Click to retry. API base: ${API_BASE}`
+          : `API base: ${API_BASE}. Click to refetch.`
+      }
+      aria-label={`${label}. Click to refetch.`}
+    >
+      <i aria-hidden />
+      <span>{label}</span>
+    </button>
   );
 }
 

@@ -45,6 +45,7 @@ is separate from the landing page at `/`.
 | Route | Endpoint | View |
 |---|---|---|
 | `/console` | `GET /health`, `GET /services` | API map and graph summary |
+| `/console/analysis` | `GET /packages/:n/:v/analysis?depth=` | Risk + blast radius + paths in one request |
 | `/console/graph` | `GET /packages/:name/graph?depth=` | 3D graph — one sphere shell per hop |
 | `/console/blast` | `GET /versions/:key/blast-radius?depth=` | Services by hop distance, coloured by severity |
 | `/console/paths` | `GET /versions/:key/attack-path?depth=` | Each service→version chain, in order |
@@ -67,24 +68,34 @@ either prefix for display, but the raw response still carries it.
 
 ### Pointing it at the API
 
-The backend defaults to `PORT=3000`, which collides with `next dev`. Run it
-somewhere else and set the base URL:
+`NEXT_PUBLIC_CHAINTRACE_API` defaults to `http://localhost:3000` — the same port
+`next dev` binds, so **one of the two has to move** or every request 404s
+against the front-end itself. Either run the backend elsewhere:
 
 ```bash
-# backend
-PORT=4000 bun run src/server.ts
-
-# front-end
-echo 'NEXT_PUBLIC_CHAINTRACE_API=http://localhost:4000' >> .env.local
+PORT=4000 bun run src/server.ts && echo 'NEXT_PUBLIC_CHAINTRACE_API=http://localhost:4000' > front-end/.env.local
 ```
 
-`NEXT_PUBLIC_CHAINTRACE_API` defaults to `http://localhost:4000`. The backend
-sends `Access-Control-Allow-Origin: *`, so the browser calls it directly.
+…or run the front-end elsewhere (`next dev -p 3001`) and leave the default. The
+backend sends `Access-Control-Allow-Origin: *`, so the browser calls it directly.
 
-When the API is unreachable every page falls back to a sample dataset and
-labels itself `sample data` in the header — the fallback risk scores are
-produced by a port of `backend/src/graph/query/risk.ts`, so they match what the
-backend would return for the same graph.
+### Live vs sample data
+
+One indicator, top right, describes what is actually on screen:
+
+- **live** — the last request came from the API
+- **sample data** — it failed, so the sample set is showing; the tooltip carries
+  the reason and the API base, and clicking it retries
+
+Sample risk scores come from a port of `backend/src/graph/query/risk.ts`, so demo
+numbers match what the backend would return for the same graph.
+
+### One target, every page
+
+The package, version, ecosystem and depth are console-wide state, persisted to
+`localStorage`. Set them anywhere and every other view is already asking about
+the same thing — no retyping per page. Defaults to `npm:axios@1.7.2`, which is
+what the backend's own seed dataset holds.
 
 ### Notes
 
@@ -94,7 +105,8 @@ backend would return for the same graph.
   so depth 1 and depth 5 both frame correctly.
 - Clicking a node flies the camera to it and defocuses everything off its path
   back to hop 0. Clear it by clicking past the graph, pressing `Escape`, or
-  clicking the node again.
+  clicking the node again. Labels render at a fixed screen size, so they stay
+  readable at any zoom.
 - Auto-rotation stops the first time you take hold of the graph, and
   `prefers-reduced-motion` disables it outright.
 - The graph page has a filterable version list — selecting a row focuses that

@@ -1,21 +1,20 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 
-import {
-  api,
-  versionKey,
-  type CoMaintainers,
-  type Ecosystem,
-} from "@/lib/api";
+import { api, type CoMaintainers } from "@/lib/api";
 import { demoCoMaintainers } from "@/lib/demo";
 import { useApi } from "@/lib/use-api";
+import {
+  useReportSource,
+  useStatus,
+  useTarget,
+} from "@/components/console/console-state";
 import { PageHead } from "@/components/console/shell";
 import {
   Panel,
-  QueryBar,
+  TargetBar,
   RawJson,
-  SourceBadge,
   Stat,
   Table,
   VersionKey,
@@ -31,12 +30,10 @@ import {
  */
 
 export default function MaintainersPage() {
-  const [ecosystem, setEcosystem] = useState<Ecosystem>("npm");
-  const [pkg, setPkg] = useState("http-errors");
-  const [version, setVersion] = useState("2.0.0");
-  const [query, setQuery] = useState({
-    key: versionKey("http-errors", "2.0.0", "npm"),
-  });
+
+  const { key } = useTarget();
+  const { nonce } = useStatus();
+  const query = useMemo(() => ({ key }), [key]);
 
   const load = useCallback(
     (signal: AbortSignal) => api.coMaintainers(query.key, signal),
@@ -44,11 +41,13 @@ export default function MaintainersPage() {
   );
   const fallback = useCallback(() => demoCoMaintainers(query.key), [query]);
 
-  const { data, error, source, loading, reload } = useApi<CoMaintainers>(
-    `comaint:${query.key}`,
+  const { data, error, source, loading } = useApi<CoMaintainers>(
+    `comaint:${query.key}:${nonce}`,
     load,
     fallback,
   );
+
+  useReportSource(source, error);
 
   const packages = useMemo(
     () =>
@@ -69,8 +68,6 @@ export default function MaintainersPage() {
     return [...counts.entries()].sort((a, b) => b[1] - a[1]);
   }, [packages]);
 
-  const run = () =>
-    setQuery({ key: versionKey(pkg.trim(), version.trim(), ecosystem) });
 
   return (
     <>
@@ -78,43 +75,9 @@ export default function MaintainersPage() {
         eyebrow="Co-maintainers"
         title="What else that account can publish"
         lede="Packages sharing at least one maintainer with the queried version. A stolen publish token is not scoped to the package you noticed — it reaches everything the account owns."
-      >
-        <SourceBadge
-          source={source}
-          error={error}
-          loading={loading}
-          onReload={reload}
-        />
-      </PageHead>
+      />
 
-      <QueryBar
-        ecosystem={ecosystem}
-        onEcosystem={setEcosystem}
-        fields={[
-          {
-            id: "pkg",
-            label: "package",
-            value: pkg,
-            onChange: setPkg,
-            placeholder: ecosystem === "npm" ? "http-errors" : "requests",
-          },
-          {
-            id: "version",
-            label: "version",
-            value: version,
-            onChange: setVersion,
-            placeholder: ecosystem === "npm" ? "2.0.0" : "2.32.3",
-          },
-        ]}
-        onSubmit={run}
-      >
-        <span className="cs-stat-hint" style={{ alignSelf: "center" }}>
-          key{" "}
-          <VersionKey
-            value={versionKey(pkg.trim(), version.trim(), ecosystem)}
-          />
-        </span>
-      </QueryBar>
+      <TargetBar depth={false} />
 
       <div className="cs-stats">
         <Stat

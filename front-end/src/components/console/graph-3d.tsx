@@ -66,7 +66,7 @@ const worldOf = (
 const FIT = 11.5;
 
 /* camera distance when a node is focused, and when nothing is */
-const FOCUS_DISTANCE = 12.5;
+const FOCUS_DISTANCE = 11;
 const HOME_DISTANCE = 30;
 
 export function Graph3D(props: Graph3DProps) {
@@ -247,9 +247,9 @@ function Scene({
         enableDamping
         dampingFactor={0.08}
         rotateSpeed={0.75}
-        zoomSpeed={0.7}
-        minDistance={1.8}
-        maxDistance={80}
+        zoomSpeed={1.15}
+        minDistance={1.2}
+        maxDistance={260}
         autoRotate={autoRotate && !reduce && !selected && !grabbed}
         onStart={() => setGrabbed(true)}
         autoRotateSpeed={0.42}
@@ -320,7 +320,6 @@ function Scene({
         <Html
           position={worldOf(pinned.p.pos, scale)}
           center
-          distanceFactor={10}
           zIndexRange={[20, 10]}
         >
           <div className="cs-tip cs-tip-pin">
@@ -337,7 +336,6 @@ function Scene({
         <Html
           position={worldOf(hover.p.pos, scale)}
           center
-          distanceFactor={10}
           zIndexRange={[19, 10]}
         >
           <div className="cs-tip">

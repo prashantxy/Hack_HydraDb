@@ -5,12 +5,12 @@ import { useCallback, useMemo } from "react";
 import { api, type ServicesResponse } from "@/lib/api";
 import { DEMO_SERVICES } from "@/lib/demo";
 import { useApi } from "@/lib/use-api";
+import { useReportSource } from "@/components/console/console-state";
 import { PageHead } from "@/components/console/shell";
 import {
   EnvChip,
   Panel,
   RawJson,
-  SourceBadge,
   Stat,
   Table,
 } from "@/components/console/ui";
@@ -52,11 +52,13 @@ export default function ServicesPage() {
     [],
   );
 
-  const { data, error, source, loading, reload } = useApi<ServicesResponse>(
+  const { data, error, source, loading } = useApi<ServicesResponse>(
     "services",
     load,
     fallback,
   );
+
+  useReportSource(source, error);
 
   const services = useMemo(() => data?.services ?? [], [data]);
 
@@ -84,14 +86,7 @@ export default function ServicesPage() {
         eyebrow="Services"
         title="Who ships what"
         lede="A service names its repo, team and environment, and the versions it depends on. Without these edges the graph knows packages but not consequences."
-      >
-        <SourceBadge
-          source={source}
-          error={error}
-          loading={loading}
-          onReload={reload}
-        />
-      </PageHead>
+      />
 
       <div className="cs-stats">
         <Stat label="Registered" value={services.length} tone="hot" />

@@ -3,16 +3,20 @@
 import { useCallback, useMemo, useState } from "react";
 
 import { api, stripEcosystem, type PackageGraph } from "@/lib/api";
-import { DEMO_PACKAGE, demoGraph } from "@/lib/demo";
+import { demoGraph } from "@/lib/demo";
 import { useApi } from "@/lib/use-api";
+import {
+  useReportSource,
+  useStatus,
+  useTarget,
+} from "@/components/console/console-state";
 import { Graph3D, type Edge3D, type Node3D } from "@/components/console/graph-3d";
 import { PageHead } from "@/components/console/shell";
 import {
   DepthLegend,
   Panel,
-  QueryBar,
+  TargetBar,
   RawJson,
-  SourceBadge,
   Stat,
   Table,
   VersionKey,
@@ -27,11 +31,15 @@ import {
  */
 
 export default function GraphPage() {
-  const [pkg, setPkg] = useState(DEMO_PACKAGE);
-  const [depth, setDepth] = useState(3);
-  const [query, setQuery] = useState({ pkg: DEMO_PACKAGE, depth: 3 });
   const [selected, setSelected] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
+
+  const { target } = useTarget();
+  const { nonce } = useStatus();
+  const query = useMemo(
+    () => ({ pkg: target.name, depth: target.depth }),
+    [target.name, target.depth],
+  );
 
   const load = useCallback(
     (signal: AbortSignal) => api.packageGraph(query.pkg, query.depth, signal),
@@ -42,11 +50,13 @@ export default function GraphPage() {
     [query],
   );
 
-  const { data, error, source, loading, reload } = useApi<PackageGraph>(
-    `graph:${query.pkg}:${query.depth}`,
+  const { data, error, source, loading } = useApi<PackageGraph>(
+    `graph:${query.pkg}:${query.depth}:${nonce}`,
     load,
     fallback,
   );
+
+  useReportSource(source, error);
 
   const nodes: Node3D[] = useMemo(
     () =>
@@ -114,10 +124,6 @@ export default function GraphPage() {
     [data, selected],
   );
 
-  const run = () => {
-    setSelected(null);
-    setQuery({ pkg: pkg.trim() || DEMO_PACKAGE, depth });
-  };
 
   return (
     <>
@@ -125,29 +131,9 @@ export default function GraphPage() {
         eyebrow="Dependency graph"
         title="The tree, in three dimensions"
         lede="Every hop gets its own shell. A subtree stays in one cone, so the shape you see is the shape the traversal walked. Click a node to isolate its path back to hop 0."
-      >
-        <SourceBadge
-          source={source}
-          error={error}
-          loading={loading}
-          onReload={reload}
-        />
-      </PageHead>
-
-      <QueryBar
-        fields={[
-          {
-            id: "pkg",
-            label: "package",
-            value: pkg,
-            onChange: setPkg,
-            placeholder: "express",
-          },
-        ]}
-        depth={depth}
-        onDepth={setDepth}
-        onSubmit={run}
       />
+
+      <TargetBar version={false} />
 
       <div className="cs-stats">
         <Stat label="Root" value={data?.package ?? "—"} />

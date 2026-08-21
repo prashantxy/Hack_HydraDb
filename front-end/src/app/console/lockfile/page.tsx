@@ -2,22 +2,21 @@
 
 import { useCallback, useMemo, useState } from "react";
 
-import {
-  api,
-  versionKey,
-  type Ecosystem,
-  type LockfileEntry,
-  type LockfileResolve,
-} from "@/lib/api";
+import { api, type LockfileEntry, type LockfileResolve } from "@/lib/api";
 import { demoLockfileResolve } from "@/lib/demo";
 import { useApi } from "@/lib/use-api";
+import {
+  useReportSource,
+  useStatus,
+  useTarget,
+} from "@/components/console/console-state";
+import { PixelArrow } from "@/components/site/primitives";
 import { PageHead } from "@/components/console/shell";
 import {
   EnvChip,
   Panel,
-  QueryBar,
+  TargetBar,
   RawJson,
-  SourceBadge,
   Stat,
   Table,
   VersionKey,
@@ -32,9 +31,9 @@ import {
  * takes the pinned lines and checks each one against the graph.
  */
 
-const SAMPLE = `http-errors 2.0.0
-express 4.19.2
-body-parser 1.20.2
+const SAMPLE = `axios 1.7.2
+form-data 4.0.0
+combined-stream 1.0.8
 lodash 4.17.21
 requests==2.32.3`;
 
@@ -84,17 +83,23 @@ function parseEntries(text: string): {
 }
 
 export default function LockfilePage() {
-  const [ecosystem, setEcosystem] = useState<Ecosystem>("npm");
-  const [pkg, setPkg] = useState("http-errors");
-  const [version, setVersion] = useState("2.0.0");
   const [text, setText] = useState(SAMPLE);
 
   const parsed = useMemo(() => parseEntries(text), [text]);
 
-  const [query, setQuery] = useState({
-    key: versionKey("http-errors", "2.0.0", "npm"),
-    entries: parseEntries(SAMPLE).entries,
-  });
+
+  const { target, key } = useTarget();
+  const { nonce } = useStatus();
+
+  /* the entries are submitted, not live-typed, so a half-pasted
+   * lockfile does not fire a request per keystroke */
+  const [submitted, setSubmitted] = useState(
+    () => parseEntries(SAMPLE).entries,
+  );
+  const query = useMemo(
+    () => ({ key, entries: submitted }),
+    [key, submitted],
+  );
 
   const load = useCallback(
     (signal: AbortSignal) =>
@@ -106,11 +111,13 @@ export default function LockfilePage() {
     [query],
   );
 
-  const { data, error, source, loading, reload } = useApi<LockfileResolve>(
-    `lockfile:${query.key}:${query.entries.map((e) => `${e.name}@${e.version}`).join(",")}`,
+  const { data, error, source, loading } = useApi<LockfileResolve>(
+    `lockfile:${query.key}:${query.entries.map((e) => `${e.name}@${e.version}`).join(",")}:${nonce}`,
     load,
     fallback,
   );
+
+  useReportSource(source, error);
 
   /* the rows that matter: an entry reachable from a service whose tree
    * gets to the compromised version */
@@ -124,11 +131,6 @@ export default function LockfilePage() {
     );
   }, [data]);
 
-  const run = () =>
-    setQuery({
-      key: versionKey(pkg.trim(), version.trim(), ecosystem),
-      entries: parsed.entries,
-    });
 
   return (
     <>
@@ -136,42 +138,18 @@ export default function LockfilePage() {
         eyebrow="Lockfile resolve"
         title="Which lockfiles took the bad version"
         lede="Paste the pinned lines from a lockfile and each one is checked against the graph: does this exact version exist, and does anything a service ships reach the compromised version through it."
-      >
-        <SourceBadge
-          source={source}
-          error={error}
-          loading={loading}
-          onReload={reload}
-        />
-      </PageHead>
+      />
 
-      <QueryBar
-        ecosystem={ecosystem}
-        onEcosystem={setEcosystem}
-        fields={[
-          {
-            id: "pkg",
-            label: "compromised package",
-            value: pkg,
-            onChange: setPkg,
-            placeholder: "http-errors",
-          },
-          {
-            id: "version",
-            label: "version",
-            value: version,
-            onChange: setVersion,
-            placeholder: "2.0.0",
-          },
-        ]}
-        onSubmit={run}
+      <TargetBar
+        depth={false}
         submitLabel="Resolve"
-      >
-        <span className="cs-stat-hint" style={{ alignSelf: "center" }}>
-          against {parsed.entries.length} parsed{" "}
-          {parsed.entries.length === 1 ? "entry" : "entries"}
-        </span>
-      </QueryBar>
+        note={
+          <>
+            against {parsed.entries.length} parsed{" "}
+            {parsed.entries.length === 1 ? "entry" : "entries"}
+          </>
+        }
+      />
 
       <div className="cs-stats">
         <Stat
@@ -279,6 +257,16 @@ export default function LockfilePage() {
                 padding: ".6rem",
               }}
             />
+            <button
+              type="button"
+              className="ct-btn cs-run"
+              style={{ marginTop: ".7rem" }}
+              onClick={() => setSubmitted(parsed.entries)}
+            >
+              Check these entries
+              <PixelArrow />
+            </button>
+
             <p
               style={{
                 fontSize: 11.5,
@@ -317,7 +305,7 @@ export default function LockfilePage() {
                 <VersionKey value={query.key} />
               </dd>
               <dt>package</dt>
-              <dd>{data?.compromisedPackage ?? pkg}</dd>
+              <dd>{data?.compromisedPackage ?? target.name}</dd>
             </dl>
             <p
               style={{

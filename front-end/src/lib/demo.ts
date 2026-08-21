@@ -33,6 +33,15 @@ import {
 /* ── a real express dependency tree ──────────────────────────── */
 
 const VERSIONS: Record<string, string> = {
+  /* axios and its real tree — the package the backend's own dataset
+   * is seeded with, so the sample set mirrors the live one */
+  axios: "1.7.2",
+  "follow-redirects": "1.15.6",
+  "form-data": "4.0.0",
+  asynckit: "0.4.0",
+  "delayed-stream": "1.0.0",
+  "proxy-from-env": "1.1.0",
+
   express: "4.19.2",
   accepts: "1.3.8",
   "array-flatten": "1.1.1",
@@ -86,6 +95,10 @@ const VERSIONS: Record<string, string> = {
 
 /* name → its runtime dependencies */
 const TREE: Record<string, string[]> = {
+  axios: ["follow-redirects", "form-data", "proxy-from-env"],
+  "form-data": ["asynckit", "combined-stream", "mime-types"],
+  "combined-stream": ["delayed-stream"],
+
   express: [
     "accepts",
     "array-flatten",
@@ -173,7 +186,6 @@ const TREE: Record<string, string[]> = {
   "serve-static": ["encodeurl", "escape-html", "parseurl", "send"],
   "type-is": ["media-typer", "mime-types"],
   qs: ["safe-buffer"],
-  "combined-stream": [],
 };
 
 const RANGES: Record<string, string> = {
@@ -195,7 +207,7 @@ const key = (name: string) => versionKey(name, VERSIONS[name] ?? "0.0.0");
  * node is only visited once, and an edge carries the depth of its
  * target level. */
 export function demoGraph(pkg: string, depth: number): PackageGraph {
-  const root = TREE[pkg] ? pkg : "express";
+  const root = TREE[pkg] ? pkg : "axios";
   const nodes = new Map<string, GraphNode>();
   const edges: GraphEdge[] = [];
   const seen = new Set<string>([root]);
@@ -293,7 +305,7 @@ export const DEMO_SERVICES: (ServiceRow & { hops: number })[] = [
   },
 ];
 
-export const DEMO_VERSION_KEY = key("http-errors");
+export const DEMO_VERSION_KEY = key("axios");
 
 export function demoBlastRadius(
   versionKeyIn = DEMO_VERSION_KEY,
@@ -320,16 +332,11 @@ export function demoBlastRadius(
 
 /* the chain each service takes to reach the compromised version */
 const CHAINS: Record<string, string[]> = {
-  "edge-gateway": ["http-errors"],
-  "checkout-api": ["express", "http-errors"],
-  "billing-worker": ["express", "body-parser", "http-errors"],
-  "docs-site": ["express", "serve-static", "send", "http-errors"],
-  "admin-console": [
-    "express",
-    "body-parser",
-    "raw-body",
-    "http-errors",
-  ],
+  "edge-gateway": ["axios"],
+  "checkout-api": ["form-data", "axios"],
+  "billing-worker": ["combined-stream", "form-data", "axios"],
+  "docs-site": ["mime-types", "form-data", "axios"],
+  "admin-console": ["delayed-stream", "combined-stream", "form-data", "axios"],
 };
 
 export function demoAttackPaths(
@@ -444,8 +451,8 @@ export function demoRisk(
   };
 }
 
-export const DEMO_PACKAGE = "express";
-export const DEMO_PACKAGE_VERSION = VERSIONS.express;
+export const DEMO_PACKAGE = "axios";
+export const DEMO_PACKAGE_VERSION = VERSIONS.axios;
 
 /* ── co-maintainers ─────────────────────────────────────────────
  * (m:Maintainer)-[:MAINTAINS]->(:Package) shared with the queried
@@ -458,18 +465,17 @@ export function demoCoMaintainers(
 ): CoMaintainers {
   const packages: CoMaintainerPackage[] = [
     {
-      packageName: "statuses",
-      sharedMaintainers: ["dougwilson", "jonathanong"],
+      packageName: "follow-redirects",
+      sharedMaintainers: ["jasonsaayman", "emilyemorehouse"],
       sharedCount: 2,
     },
     {
-      packageName: "depd",
-      sharedMaintainers: ["dougwilson", "jonathanong"],
+      packageName: "axios-mock-adapter",
+      sharedMaintainers: ["jasonsaayman", "emilyemorehouse"],
       sharedCount: 2,
     },
-    { packageName: "on-finished", sharedMaintainers: ["dougwilson"], sharedCount: 1 },
-    { packageName: "raw-body", sharedMaintainers: ["dougwilson"], sharedCount: 1 },
-    { packageName: "toidentifier", sharedMaintainers: ["jonathanong"], sharedCount: 1 },
+    { packageName: "form-data", sharedMaintainers: ["jasonsaayman"], sharedCount: 1 },
+    { packageName: "proxy-from-env", sharedMaintainers: ["jasonsaayman"], sharedCount: 1 },
   ].sort(
     (a, b) =>
       b.sharedCount - a.sharedCount ||

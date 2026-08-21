@@ -2,15 +2,14 @@
 
 import { useState, type ReactNode } from "react";
 import {
-  API_BASE,
   ECOSYSTEMS,
   type Ecosystem,
   type Popularity,
   type Severity,
 } from "@/lib/api";
 import { depthHex } from "@/lib/layout3d";
-import type { Source } from "@/lib/use-api";
 import { PixelArrow, Ticks } from "@/components/site/primitives";
+import { useStatus, useTarget } from "./console-state";
 
 /* ── panel ───────────────────────────────────────────────────── */
 
@@ -38,40 +37,6 @@ export function Panel({
       )}
       <div className={flush ? "" : "cs-panel-body"}>{children}</div>
     </section>
-  );
-}
-
-/* ── data source badge ───────────────────────────────────────── */
-
-export function SourceBadge({
-  source,
-  error,
-  loading,
-  onReload,
-}: {
-  source: Source;
-  error: string | null;
-  loading: boolean;
-  onReload?: () => void;
-}) {
-  const host = API_BASE.replace(/^https?:\/\//, "");
-
-  return (
-    <div className={`cs-source is-${source}`}>
-      <i className={loading ? "cs-dot cs-dot-pulse" : "cs-dot"} aria-hidden />
-      <span>
-        {loading
-          ? `querying ${host}`
-          : source === "live"
-            ? `live · ${host}`
-            : `sample data · ${error ?? "api unreachable"}`}
-      </span>
-      {onReload && (
-        <button type="button" className="cs-mini-btn" onClick={onReload}>
-          retry
-        </button>
-      )}
-    </div>
   );
 }
 
@@ -306,6 +271,116 @@ export function QueryBar({
       </button>
 
       {children}
+    </form>
+  );
+}
+
+/* ── shared target bar ───────────────────────────────────────
+ * Bound to the console-wide target, so a package typed on one page
+ * is the package every other page is already asking about. Each view
+ * shows only the fields its endpoint actually takes.
+ */
+
+export function TargetBar({
+  version = true,
+  depth = true,
+  depthLabel = "depth",
+  submitLabel = "Run",
+  note,
+  children,
+}: {
+  version?: boolean;
+  depth?: boolean;
+  depthLabel?: string;
+  submitLabel?: string;
+  note?: ReactNode;
+  children?: ReactNode;
+}) {
+  const { target, key, setTarget } = useTarget();
+  const { refresh } = useStatus();
+
+  /* The inputs are uncontrolled and keyed to the shared target: when
+   * another page changes it they remount with the new value, so there
+   * is no state to sync and nothing to get out of step. */
+  return (
+    <form
+      className="cs-query"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const form = new FormData(e.currentTarget);
+        const name = String(form.get("name") ?? "").trim() || target.name;
+        const ver = String(form.get("version") ?? "").trim() || target.version;
+
+        const unchanged =
+          name === target.name && (!version || ver === target.version);
+
+        setTarget(version ? { name, version: ver } : { name });
+        if (unchanged) refresh();
+      }}
+    >
+      <div className="cs-dial" role="group" aria-label="Ecosystem">
+        <span className="cs-dial-label">eco</span>
+        {ECOSYSTEMS.map((e) => (
+          <button
+            key={e}
+            type="button"
+            className={`cs-dial-btn cs-dial-wide ${e === target.ecosystem ? "is-on" : ""}`}
+            aria-pressed={e === target.ecosystem}
+            onClick={() => setTarget({ ecosystem: e })}
+          >
+            {e}
+          </button>
+        ))}
+      </div>
+
+      <label className="cs-field">
+        <span>package</span>
+        <input
+          key={`name:${target.name}`}
+          name="name"
+          defaultValue={target.name}
+          placeholder={target.ecosystem === "npm" ? "axios" : "requests"}
+          spellCheck={false}
+          autoComplete="off"
+        />
+      </label>
+
+      {version && (
+        <label className="cs-field" style={{ flex: "0 1 150px" }}>
+          <span>version</span>
+          <input
+            key={`version:${target.version}`}
+            name="version"
+            defaultValue={target.version}
+            placeholder={target.ecosystem === "npm" ? "1.7.2" : "2.32.3"}
+            spellCheck={false}
+            autoComplete="off"
+          />
+        </label>
+      )}
+
+      {depth && (
+        <DepthDial
+          value={target.depth}
+          onChange={(d) => setTarget({ depth: d })}
+          label={depthLabel}
+        />
+      )}
+
+      {children}
+
+      <button type="submit" className="ct-btn cs-run">
+        {submitLabel}
+        <PixelArrow />
+      </button>
+
+      <span className="cs-query-note">
+        {note ?? (
+          <>
+            key <VersionKey value={key} />
+          </>
+        )}
+      </span>
     </form>
   );
 }

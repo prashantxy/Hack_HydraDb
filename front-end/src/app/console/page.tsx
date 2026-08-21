@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useCallback } from "react";
 
-import { api, API_BASE, type ServicesResponse } from "@/lib/api";
+import { api, type ServicesResponse } from "@/lib/api";
 import { DEMO_SERVICES } from "@/lib/demo";
 import { useApi } from "@/lib/use-api";
+import { useReportSource } from "@/components/console/console-state";
 import { PageHead } from "@/components/console/shell";
-import { Panel, SourceBadge, Stat, Table } from "@/components/console/ui";
+import { Panel, Stat, Table } from "@/components/console/ui";
 import { PixelArrow } from "@/components/site/primitives";
 
 /*
@@ -21,6 +22,12 @@ const VIEWS = [
     route: "GET /packages/:name/graph?depth=",
     title: "Dependency graph",
     body: "The traversal rendered in 3D, one sphere shell per hop, with the subtree of any node isolatable in a click.",
+  },
+  {
+    href: "/console/analysis",
+    route: "GET /packages/:name/:version/analysis",
+    title: "Analysis",
+    body: "Risk, blast radius and attack paths in a single request — the whole picture for one version on one screen.",
   },
   {
     href: "/console/blast",
@@ -70,7 +77,6 @@ const OTHER_ROUTES: [string, string][] = [
   ["GET /health", "liveness"],
   ["GET /packages/:name", "package info and known versions"],
   ["GET /versions/:key/dependencies", "direct dependencies of one version"],
-  ["GET /packages/:name/:version/analysis", "risk + blast radius + paths in one call"],
   ["GET /packages/:name/:version/risk", "risk addressed by package and version"],
   ["GET /packages/:name/:version/ingest", "crawl npm and write the graph (writes)"],
   ["GET /pypi/:name/:version/ingest", "crawl PyPI and write the graph (writes)"],
@@ -99,11 +105,13 @@ export default function ConsoleHome() {
     [],
   );
 
-  const { data, error, source, loading, reload } = useApi<ServicesResponse>(
+  const { data, error, source } = useApi<ServicesResponse>(
     "overview-services",
     load,
     fallback,
   );
+
+  useReportSource(source, error);
 
   const services = data?.services ?? [];
 
@@ -113,17 +121,9 @@ export default function ConsoleHome() {
         eyebrow="Console"
         title="The API, made operable"
         lede="Every view here is one endpoint, rendered the way that endpoint's answer is actually shaped. Depth-based traversals get a 3D graph; ordered chains stay flat and readable. The graph holds npm and PyPI side by side."
-      >
-        <SourceBadge
-          source={source}
-          error={error}
-          loading={loading}
-          onReload={reload}
-        />
-      </PageHead>
+      />
 
       <div className="cs-stats">
-        <Stat label="API base" value={API_BASE.replace(/^https?:\/\//, "")} />
         <Stat label="Services" value={services.length} tone="hot" />
         <Stat
           label="Production"

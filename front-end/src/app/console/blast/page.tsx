@@ -4,25 +4,26 @@ import { useCallback, useMemo, useState } from "react";
 
 import {
   api,
-  versionKey,
   type BlastRadius,
-  type Ecosystem,
 } from "@/lib/api";
 import { stripEcosystem } from "@/lib/api";
 import { demoBlastRadius, scoreService } from "@/lib/demo";
 import { useApi } from "@/lib/use-api";
+import {
+  useReportSource,
+  useStatus,
+  useTarget,
+} from "@/components/console/console-state";
 import { Graph3D, type Edge3D, type Node3D } from "@/components/console/graph-3d";
 import { PageHead } from "@/components/console/shell";
 import {
   EnvChip,
   Panel,
-  QueryBar,
+  TargetBar,
   RawJson,
   SeverityChip,
-  SourceBadge,
   Stat,
   Table,
-  VersionKey,
 } from "@/components/console/ui";
 
 /*
@@ -42,15 +43,14 @@ const SEV_RGB: Record<string, [number, number, number]> = {
 };
 
 export default function BlastPage() {
-  const [ecosystem, setEcosystem] = useState<Ecosystem>("npm");
-  const [pkg, setPkg] = useState("http-errors");
-  const [version, setVersion] = useState("2.0.0");
-  const [depth, setDepth] = useState(5);
-  const [query, setQuery] = useState({
-    key: versionKey("http-errors", "2.0.0", "npm"),
-    depth: 5,
-  });
   const [selected, setSelected] = useState<string | null>(null);
+
+  const { target, key } = useTarget();
+  const { nonce } = useStatus();
+  const query = useMemo(
+    () => ({ key, depth: target.depth }),
+    [key, target.depth],
+  );
 
   const load = useCallback(
     (signal: AbortSignal) => api.blastRadius(query.key, query.depth, signal),
@@ -61,11 +61,13 @@ export default function BlastPage() {
     [query],
   );
 
-  const { data, error, source, loading, reload } = useApi<BlastRadius>(
-    `blast:${query.key}:${query.depth}`,
+  const { data, error, source, loading } = useApi<BlastRadius>(
+    `blast:${query.key}:${query.depth}:${nonce}`,
     load,
     fallback,
   );
+
+  useReportSource(source, error);
 
   /* score locally with the backend's own rules so the view can rank
    * and colour without a second request */
@@ -115,13 +117,6 @@ export default function BlastPage() {
     [scored, query.key],
   );
 
-  const run = () => {
-    setSelected(null);
-    setQuery({
-      key: versionKey(pkg.trim(), version.trim(), ecosystem),
-      depth,
-    });
-  };
 
   const selectedService =
     scored.find((s) => `svc:${s.id}` === selected) ?? null;
@@ -132,45 +127,9 @@ export default function BlastPage() {
         eyebrow="Blast radius"
         title="Which services this version reaches"
         lede="Reverse DEPENDS_ON traversal from one version out to the services that ship it. Distance from the centre is hop count — the difference between an upgrade you schedule and one you page for."
-      >
-        <SourceBadge
-          source={source}
-          error={error}
-          loading={loading}
-          onReload={reload}
-        />
-      </PageHead>
+      />
 
-      <QueryBar
-        ecosystem={ecosystem}
-        onEcosystem={setEcosystem}
-        fields={[
-          {
-            id: "pkg",
-            label: "package",
-            value: pkg,
-            onChange: setPkg,
-            placeholder: ecosystem === "npm" ? "http-errors" : "requests",
-          },
-          {
-            id: "version",
-            label: "version",
-            value: version,
-            onChange: setVersion,
-            placeholder: ecosystem === "npm" ? "2.0.0" : "2.32.3",
-          },
-        ]}
-        depth={depth}
-        onDepth={setDepth}
-        onSubmit={run}
-      >
-        <span className="cs-stat-hint" style={{ alignSelf: "center" }}>
-          key{" "}
-          <VersionKey
-            value={versionKey(pkg.trim(), version.trim(), ecosystem)}
-          />
-        </span>
-      </QueryBar>
+      <TargetBar />
 
       <div className="cs-stats">
         <Stat

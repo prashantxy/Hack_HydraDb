@@ -4,20 +4,22 @@ import { useCallback, useMemo, useState } from "react";
 
 import {
   api,
-  versionKey,
   type AttackPaths,
-  type Ecosystem,
 } from "@/lib/api";
 import { stripEcosystem } from "@/lib/api";
 import { demoAttackPaths } from "@/lib/demo";
 import { useApi } from "@/lib/use-api";
+import {
+  useReportSource,
+  useStatus,
+  useTarget,
+} from "@/components/console/console-state";
 import { PageHead } from "@/components/console/shell";
 import {
   EnvChip,
   Panel,
-  QueryBar,
+  TargetBar,
   RawJson,
-  SourceBadge,
   Stat,
   VersionKey,
 } from "@/components/console/ui";
@@ -33,15 +35,14 @@ import {
 const short = stripEcosystem;
 
 export default function PathsPage() {
-  const [ecosystem, setEcosystem] = useState<Ecosystem>("npm");
-  const [pkg, setPkg] = useState("http-errors");
-  const [version, setVersion] = useState("2.0.0");
-  const [depth, setDepth] = useState(5);
-  const [query, setQuery] = useState({
-    key: versionKey("http-errors", "2.0.0", "npm"),
-    depth: 5,
-  });
   const [envFilter, setEnvFilter] = useState<string>("all");
+
+  const { target, key } = useTarget();
+  const { nonce } = useStatus();
+  const query = useMemo(
+    () => ({ key, depth: target.depth }),
+    [key, target.depth],
+  );
 
   const load = useCallback(
     (signal: AbortSignal) => api.attackPaths(query.key, query.depth, signal),
@@ -52,11 +53,13 @@ export default function PathsPage() {
     [query],
   );
 
-  const { data, error, source, loading, reload } = useApi<AttackPaths>(
-    `paths:${query.key}:${query.depth}`,
+  const { data, error, source, loading } = useApi<AttackPaths>(
+    `paths:${query.key}:${query.depth}:${nonce}`,
     load,
     fallback,
   );
+
+  useReportSource(source, error);
 
   const paths = useMemo(
     () =>
@@ -86,11 +89,6 @@ export default function PathsPage() {
   const shortest = paths.length ? Math.min(...paths.map((p) => p.hops)) : null;
   const longest = paths.length ? Math.max(...paths.map((p) => p.hops)) : null;
 
-  const run = () =>
-    setQuery({
-      key: versionKey(pkg.trim(), version.trim(), ecosystem),
-      depth,
-    });
 
   return (
     <>
@@ -98,38 +96,9 @@ export default function PathsPage() {
         eyebrow="Attack paths"
         title="The chain, link by link"
         lede="Each row is one route from a service to the compromised version, in traversal order. This is the view you take to whoever owns the upgrade — a score nobody can audit is a score nobody acts on."
-      >
-        <SourceBadge
-          source={source}
-          error={error}
-          loading={loading}
-          onReload={reload}
-        />
-      </PageHead>
-
-      <QueryBar
-        ecosystem={ecosystem}
-        onEcosystem={setEcosystem}
-        fields={[
-          {
-            id: "pkg",
-            label: "package",
-            value: pkg,
-            onChange: setPkg,
-            placeholder: ecosystem === "npm" ? "http-errors" : "requests",
-          },
-          {
-            id: "version",
-            label: "version",
-            value: version,
-            onChange: setVersion,
-            placeholder: ecosystem === "npm" ? "2.0.0" : "2.32.3",
-          },
-        ]}
-        depth={depth}
-        onDepth={setDepth}
-        onSubmit={run}
       />
+
+      <TargetBar />
 
       <div className="cs-stats">
         <Stat label="Paths" value={data?.affectedServices ?? 0} tone="hot" />

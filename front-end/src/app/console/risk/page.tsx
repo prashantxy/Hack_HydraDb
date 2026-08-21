@@ -4,21 +4,23 @@ import { useCallback, useMemo, useState } from "react";
 
 import {
   api,
-  versionKey,
   type PackageRisk,
-  type Ecosystem,
 } from "@/lib/api";
 import { demoRisk } from "@/lib/demo";
 import { useApi } from "@/lib/use-api";
+import {
+  useReportSource,
+  useStatus,
+  useTarget,
+} from "@/components/console/console-state";
 import { PageHead } from "@/components/console/shell";
 import {
   EnvChip,
   Gauge,
   Panel,
-  QueryBar,
+  TargetBar,
   RawJson,
   SeverityChip,
-  SourceBadge,
   Stat,
   Table,
   VersionKey,
@@ -55,15 +57,14 @@ const BANDS: [string, string][] = [
 ];
 
 export default function RiskPage() {
-  const [ecosystem, setEcosystem] = useState<Ecosystem>("npm");
-  const [pkg, setPkg] = useState("http-errors");
-  const [version, setVersion] = useState("2.0.0");
-  const [depth, setDepth] = useState(5);
-  const [query, setQuery] = useState({
-    key: versionKey("http-errors", "2.0.0", "npm"),
-    depth: 5,
-  });
   const [selected, setSelected] = useState<number | null>(null);
+
+  const { target, key } = useTarget();
+  const { nonce } = useStatus();
+  const query = useMemo(
+    () => ({ key, depth: target.depth }),
+    [key, target.depth],
+  );
 
   const load = useCallback(
     (signal: AbortSignal) => api.risk(query.key, query.depth, signal),
@@ -71,11 +72,13 @@ export default function RiskPage() {
   );
   const fallback = useCallback(() => demoRisk(query.key, query.depth), [query]);
 
-  const { data, error, source, loading, reload } = useApi<PackageRisk>(
-    `risk:${query.key}:${query.depth}`,
+  const { data, error, source, loading } = useApi<PackageRisk>(
+    `risk:${query.key}:${query.depth}:${nonce}`,
     load,
     fallback,
   );
+
+  useReportSource(source, error);
 
   const services = useMemo(
     () => [...(data?.services ?? [])].sort((a, b) => b.score - a.score),
@@ -85,11 +88,6 @@ export default function RiskPage() {
   const selectedService =
     services.find((s) => s.serviceId === selected) ?? services[0] ?? null;
 
-  const run = () =>
-    setQuery({
-      key: versionKey(pkg.trim(), version.trim(), ecosystem),
-      depth,
-    });
 
   return (
     <>
@@ -97,38 +95,9 @@ export default function RiskPage() {
         eyebrow="Risk"
         title="Scored where it lands"
         lede="Risk is computed per service, then rolled up to the version. Production weighs heaviest, hop distance next, and every score carries the reasons that produced it."
-      >
-        <SourceBadge
-          source={source}
-          error={error}
-          loading={loading}
-          onReload={reload}
-        />
-      </PageHead>
-
-      <QueryBar
-        ecosystem={ecosystem}
-        onEcosystem={setEcosystem}
-        fields={[
-          {
-            id: "pkg",
-            label: "package",
-            value: pkg,
-            onChange: setPkg,
-            placeholder: ecosystem === "npm" ? "http-errors" : "requests",
-          },
-          {
-            id: "version",
-            label: "version",
-            value: version,
-            onChange: setVersion,
-            placeholder: ecosystem === "npm" ? "2.0.0" : "2.32.3",
-          },
-        ]}
-        depth={depth}
-        onDepth={setDepth}
-        onSubmit={run}
       />
+
+      <TargetBar />
 
       <div className="cs-grid cs-grid-main">
         <div className="cs-grid">
